@@ -17,6 +17,10 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@octokit/rest": "^21.1.1",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.23.0",
     "openai": "^4.90.0",
     "probot": "^13.0.1"
   },
