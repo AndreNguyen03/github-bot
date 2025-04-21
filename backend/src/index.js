@@ -14,6 +14,13 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    cookie: {
+      name: "connect.sid",
+      path: "/",
+      secure: false, // BẮT BUỘC để dùng với http://localhost
+      httpOnly: true,
+      maxAge: 1000 * 60 * 30, // 1 tiếng (hoặc tùy)
+    },
   })
 );
 app.use(passport.initialize());
@@ -36,12 +43,30 @@ app.get(
 
 // 👉 API trả user hiện tại
 app.get("/api/user", (req, res) => {
-  res.json(req.user || null);
+  if (!req.user) {
+    return res.json({ message: "Chưa đăng nhập" });
+  }
+  res.json(req.user);
 });
 
 // 👉 Logout
 app.post("/auth/logout", (req, res) => {
-  req.logout(() => {
+  console.log("Trước khi logout:", req.session);
+
+  // Xóa session
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Lỗi khi hủy session" });
+    }
+
+    // Xóa cookie trên client
+    res.clearCookie("connect.sid", {
+      path: "/",
+      secure: false,
+      httpOnly: true,
+      maxAge: 1000 * 60 * 30,
+    });
+
     res.json({ message: "Đã logout" });
   });
 });

@@ -165,7 +165,6 @@ export default (app: Probot) => {
   app.on("issue_comment.created", async (context) => {
     // cấp quyền
     if (!context.payload.issue.pull_request) return;
-
     app.log.info("issue comment");
     const commentBody = context.payload.comment.body.toLowerCase();
     if (commentBody.includes("rv code")) {

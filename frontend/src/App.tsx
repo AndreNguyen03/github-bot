@@ -1,33 +1,40 @@
 import { useEffect, useState } from "react";
-import viteLogo from "/vite.svg";
-import "./App.css";
-import { loginWithGitHub } from "./api";
-
+import { User } from "./types";
+import { getCurrentUser, loginWithGitHub, logOut } from "./api";
 function App() {
-  const [count, setCount] = useState(0);
+  const [user, setUser] = useState<User | null>();
+  const fetchUser = async () => {
+    const curUser = await getCurrentUser();
+    if (curUser) setUser(curUser);
+    else setUser(null);
+  };
   useEffect(() => {
-    loginWithGitHub();
+    fetchUser();
   }, []);
+  const handleLogOut = async () => {
+    const message = await logOut();
+    console.log(message);
+    fetchUser();
+  };
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank"></a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
+      <a onClick={() => loginWithGitHub()} className="text-blue-600 underline">
+        Login with GitHub
+      </a>
+      <a onClick={() => handleLogOut()} className="text-blue-600 underline">
+        Logout
+      </a>
+
+      {user ? (
+        <>
+          <div>
+            {user.id}-{user.username}
+          </div>
+          <img src={user.avatar} alt="Avatar" />
+        </>
+      ) : (
+        <div>Chưa đăng nhập</div>
+      )}
     </>
   );
 }
