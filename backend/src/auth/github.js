@@ -15,12 +15,14 @@ passport.use(
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
       callbackURL: process.env.CALLBACK_URL,
+      scope: ["repo"],
     },
     (accessToken, refreshToken, profile, done) => {
       const user = {
         id: profile.id,
         username: profile.username,
         avatar: profile.photos?.[0]?.value,
+        accessToken: accessToken,
       };
       done(null, user);
     }
