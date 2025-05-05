@@ -1,0 +1,53 @@
+[33mcommit 338bb734109bb2e3cdff2d58091d872d56afcc2b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mUI/new[m[33m)[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Mon May 5 08:48:15 2025 +0700
+
+    Show list repo
+
+[33mcommit 6a1413bb8b09d887f320abbdb0e30a58d78be7ae[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Mon May 5 08:37:37 2025 +0700
+
+    list repository
+
+[33mcommit a4de38b28b95058ac7d582552b8e9489bded0437[m[33m ([m[1;31morigin/UI/new[m[33m)[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Wed Apr 23 10:02:28 2025 +0700
+
+    call api get repo
+
+[33mcommit 6514b6e453dc474c976e3c3c9a78c5161c52d54f[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Mon Apr 21 18:01:55 2025 +0700
+
+    add frontend + backend
+
+[33mcommit 15858fcc70617c64e29b6a890d71a72f1a92bfd1[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Sun Apr 20 18:47:39 2025 +0700
+
+    update monorepo
+
+[33mcommit db439dc97ebf62bd844d564da67365edde6b1f1a[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Sun Apr 20 18:45:17 2025 +0700
+
+    update
+
+[33mcommit f76dcc6bceee40f866b60dfe6cb3ea98e64ce4c5[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Sun Apr 20 12:41:23 2025 +0700
+
+    add UI
+
+[33mcommit 3e3282c98d0469eb5393db6bf2316124afd5e345[m[33m ([m[1;31morigin/features/review-code[m[33m, [m[1;32mfeatures/review-code[m[33m)[m
+Author: Ho Pham Phu An <22520013@gm.uit.edu.vn>
+Date:   Mon Mar 31 00:51:55 2025 +0700
+
+    add reviewcode features in 12513103
+
+[33mcommit 172af07aab0e9baf99cc475b76c29ef98d7ff20e[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m
+Author: AndreNguyen03 <123562712+AndreNguyen03@users.noreply.github.com>
+Date:   Sat Mar 29 19:24:29 2025 +0700
+
+    init project: create hello world PR bot tracking
