@@ -20,7 +20,7 @@ app.use(
       path: "/",
       secure: false, // BẮT BUỘC để dùng với http://localhost
       httpOnly: true,
-      maxAge: 1000 * 60 * 30, // 1 tiếng (hoặc tùy)
+      maxAge: 1000 * 60 * 60, // 1 tiếng (hoặc tùy)
     },
   })
 );

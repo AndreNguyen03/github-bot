@@ -1,8 +1,15 @@
 import { useEffect, useState } from "react";
 import { handleAPIGetRepositories } from "../../api";
 import { Repository } from "../../types"; // Ensure this import is correct
+import RepoList from "../../components/Repo/RepoList";
 const RepositoryPage = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]); // Explicitly define the type
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const repositoriesPerPage = 10;
+  const indexOfLastRepo = currentPage * repositoriesPerPage;
+  const indexOfFirstRepo = indexOfLastRepo - repositoriesPerPage;
+  const currentRepos = repositories.slice(indexOfFirstRepo, indexOfLastRepo);
+  const totalPages = Math.ceil(repositories.length / repositoriesPerPage);
 
   useEffect(() => {
     const handleGetRepositories = async () => {
@@ -25,19 +32,19 @@ const RepositoryPage = () => {
   }, []);
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Your GitHub Repositories</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <h1 className="mb-4 text-2xl font-bold">Your GitHub Repositories</h1>
+      {/* <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {repositories.map((repo) => (
           <div
             key={repo.id}
-            className="border rounded-2xl shadow p-4 hover:shadow-lg transition-all"
+            className="rounded-2xl border p-4 shadow transition-all hover:shadow-lg"
           >
             <h2 className="text-xl font-semibold text-blue-600 hover:underline">
               <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
                 {repo.full_name}
               </a>
             </h2>
-            <p className="text-gray-700 mt-1 mb-2">
+            <p className="mb-2 mt-1 text-gray-700">
               {repo.description || "No description provided."}
             </p>
             <div className="text-sm text-gray-500">
@@ -55,6 +62,39 @@ const RepositoryPage = () => {
             </div>
           </div>
         ))}
+      </div> */}
+      {repositories.length > 0 ? (
+        <RepoList repositoriesListResponse={currentRepos} />
+      ) : (
+        <p>No repositories found.</p>
+      )}
+      <div className="mt-4 flex justify-center">
+        <div>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+            (pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                disabled={pageNum === currentPage}
+                style={{
+                  margin: "0 4px",
+                  padding: "4px 8px",
+                  backgroundColor:
+                    pageNum === currentPage ? "#007bff" : "#e0e0e0",
+                  color: pageNum === currentPage ? "#fff" : "#000",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                }}
+              >
+                {pageNum}
+              </button>
+            ),
+          )}
+        </div>
+        <h2 className="ml-4 text-lg font-semibold text-gray-400">
+          Now in {currentPage} of {totalPages}
+        </h2>
       </div>
     </div>
   );
