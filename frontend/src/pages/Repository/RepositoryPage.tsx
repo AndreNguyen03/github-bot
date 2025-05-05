@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { handleAPIGetRepositories } from "../../api";
 import { Repository } from "../../types"; // Ensure this import is correct
+import RepoList from "../../components/Repo/RepoList";
 const RepositoryPage = () => {
   const [repositories, setRepositories] = useState<Repository[]>([]); // Explicitly define the type
 
@@ -25,19 +26,19 @@ const RepositoryPage = () => {
   }, []);
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Your GitHub Repositories</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <h1 className="mb-4 text-2xl font-bold">Your GitHub Repositories</h1>
+      {/* <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {repositories.map((repo) => (
           <div
             key={repo.id}
-            className="border rounded-2xl shadow p-4 hover:shadow-lg transition-all"
+            className="rounded-2xl border p-4 shadow transition-all hover:shadow-lg"
           >
             <h2 className="text-xl font-semibold text-blue-600 hover:underline">
               <a href={repo.html_url} target="_blank" rel="noopener noreferrer">
                 {repo.full_name}
               </a>
             </h2>
-            <p className="text-gray-700 mt-1 mb-2">
+            <p className="mb-2 mt-1 text-gray-700">
               {repo.description || "No description provided."}
             </p>
             <div className="text-sm text-gray-500">
@@ -55,7 +56,12 @@ const RepositoryPage = () => {
             </div>
           </div>
         ))}
-      </div>
+      </div> */}
+      {repositories.length > 0 ? (
+        <RepoList repositoriesListResponse={repositories} />
+      ) : (
+        <p>No repositories found.</p>
+      )}
     </div>
   );
 };

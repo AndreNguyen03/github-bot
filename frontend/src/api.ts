@@ -1,6 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import { RequestError } from "@octokit/request-error";
-import { Repository, User } from "./types";
+import { RepositoryListResponse, User } from "./types";
 
 // frontend/src/api.ts
 export async function getCurrentUser(): Promise<User | null> {
@@ -88,7 +88,7 @@ export async function handleAPIGetRepositories(accessToken: string) {
 // }
 
 export async function handleAPIGetRepositoriesByInstallationId(): Promise<
-  Repository[] | undefined
+  RepositoryListResponse | undefined
 > {
   try {
     const res = await fetch(
@@ -101,8 +101,7 @@ export async function handleAPIGetRepositoriesByInstallationId(): Promise<
       throw new Error("Failed to fetch installations");
     }
     const data = await res.json();
-
-    return data.repositories as Repository[];
+    return data as RepositoryListResponse;
   } catch (err: unknown) {
     console.error("Error fetching installations", err);
     if (err instanceof RequestError) {
