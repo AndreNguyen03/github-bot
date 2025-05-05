@@ -1,59 +1,20 @@
-import { useEffect, useState } from "react";
-import { User } from "./types";
-import { getCurrentUser, loginWithGitHub, logOut } from "./api";
-
-import { Octokit } from "@octokit/rest";
-
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import LoginPage from "./pages/LoginPage";
+import RepositoryPage from "./pages/Repository/RepositoryPage";
+import HomePage from "./pages/Home/HomePage";
+import "./index.css";
+import InstallationPage from "./pages/Installation/InstallationPage";
 function App() {
-  const [user, setUser] = useState<User | null>();
-
-  const fetchUser = async () => {
-    const curUser = await getCurrentUser();
-    if (curUser) setUser(curUser);
-    else setUser(null);
-  };
-
-  useEffect(() => {
-    fetchUser();
-  }, []);
-  const handleLogOut = async () => {
-    const message = await logOut();
-    console.log(message);
-    fetchUser();
-  };
-  const handleAccessRepositories = async () => {
-    const octokit = new Octokit({
-      auth: user?.accessToken, // lấy từ OAuth
-    });
-    const res = await octokit.rest.repos.listForAuthenticatedUser();
-    console.log("repo", res.data);
-  };
   return (
-    <>
-      <a onClick={() => loginWithGitHub()} className="text-blue-600 underline">
-        Login with GitHub
-      </a>
-      <a onClick={() => handleLogOut()} className="text-blue-600 underline">
-        Logout
-      </a>
-      <a
-        onClick={() => handleAccessRepositories()}
-        className="text-blue-600 underline"
-      >
-        repos
-      </a>
-
-      {user ? (
-        <>
-          <div>
-            {user.id}-{user.username}
-          </div>
-          <img src={user.avatar} alt="Avatar" />
-        </>
-      ) : (
-        <div>Chưa đăng nhập</div>
-      )}
-    </>
+    <Router>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/home" element={<HomePage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/repositories" element={<RepositoryPage />} />
+        <Route path="/installation" element={<InstallationPage />} />
+      </Routes>
+    </Router>
   );
 }
 

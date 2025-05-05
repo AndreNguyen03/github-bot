@@ -1,30 +1,31 @@
-// const express = require("express");
-// const session = require("express-session");
-// const passport = require("passport");
-// const cors = require("cors");
-// require("dotenv").config();
-// require("./auth/github");
+const express = require("express");
+const session = require("express-session");
+const api = require("./apis/index");
+const passport = require("passport");
+const cors = require("cors");
+require("dotenv").config();
+require("./auth/github");
 
-// const app = express();
+const app = express();
 
-// app.use(cors({ origin: "http://localhost:5173", credentials: true }));
-// app.use(express.json());
-// app.use(
-//   session({
-//     secret: process.env.SESSION_SECRET,
-//     resave: false,
-//     saveUninitialized: false,
-//     cookie: {
-//       name: "connect.sid",
-//       path: "/",
-//       secure: false, // BẮT BUỘC để dùng với http://localhost
-//       httpOnly: true,
-//       maxAge: 1000 * 60 * 30, // 1 tiếng (hoặc tùy)
-//     },
-//   })
-// );
-// app.use(passport.initialize());
-// app.use(passport.session());
+app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(express.json());
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      name: "connect.sid",
+      path: "/",
+      secure: false, // BẮT BUỘC để dùng với http://localhost
+      httpOnly: true,
+      maxAge: 1000 * 60 * 30, // 1 tiếng (hoặc tùy)
+    },
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 // // 👉 Route GitHub login
 // app.get(
@@ -71,6 +72,8 @@
 //   });
 // });
 
-// app.listen(3001, () => {
-//   console.log("✅ Backend chạy tại http://localhost:3001");
-// });
+api(app);
+
+app.listen(3001, () => {
+  console.log("✅ Backend chạy tại http://localhost:3001");
+});
