@@ -27,6 +27,7 @@ const RepoList: React.FC<Props> = ({ repositoriesListResponse }) => {
           {isCheckedMode && (
             <h2>{selectedRepos?.length} Repositories are selected</h2>
           )}
+
           <button
             className="mb-4 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
             onClick={() => setIsCheckedMode(!isCheckedMode)}

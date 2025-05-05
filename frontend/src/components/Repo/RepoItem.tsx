@@ -26,7 +26,7 @@ const RepoItem: React.FC<RepoItemProps> = ({
             href={repo.html_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xl font-semibold text-blue-600 hover:underline"
+            className="text-xl font-semibold text-blue-600 hover:underline sm:text-lg"
           >
             {repo.full_name}
           </a>
