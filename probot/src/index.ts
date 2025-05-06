@@ -1,5 +1,6 @@
 import { Probot, Context } from "probot";
 import { WebhookClient, EmbedBuilder } from "discord.js";
+import * as fs from "fs";
 import * as yaml from "js-yaml";
 import { OpenAI } from "openai";
 import { summaryCodeChanges } from "./ai/summaryChanges.js";
@@ -162,7 +163,11 @@ export default (app: Probot) => {
     const owner = repository.owner.login;
     const repo = repository.name;
     const issueNumber = issue.number;
-    const config = await getConfig(context, owner, repo);
+
+    const fileContents = fs.readFileSync("config.yml", "utf8");
+    const config: any = yaml.load(fileContents);
+
+    // const config = await getConfig(context, owner, repo);
 
     if (!config || !config.enabled) {
       ``;
@@ -272,7 +277,11 @@ export default (app: Probot) => {
       const owner = repository.owner.login;
       const repo = repository.name;
       const issueNumber = issue.number;
-      const config = await getConfig(context, owner, repo);
+
+      const fileContents = fs.readFileSync("config.yml", "utf8");
+      const config: any = yaml.load(fileContents);
+
+      // const config = await getConfig(context, owner, repo);
 
       if (!config || !config.enabled) return;
 
@@ -304,7 +313,11 @@ export default (app: Probot) => {
       const owner = repository.owner.login;
       const repo = repository.name;
       const prNumber = pull_request.number;
-      const config = await getConfig(context, owner, repo);
+
+      const fileContents = fs.readFileSync("config.yml", "utf8");
+      const config: any = yaml.load(fileContents);
+
+      // const config = await getConfig(context, owner, repo);
 
       if (!config || !config.enabled) return;
 
@@ -362,7 +375,11 @@ export default (app: Probot) => {
       const owner = repository.owner.login;
       const repo = repository.name;
       const prNumber = pull_request.number;
-      const config = await getConfig(context, owner, repo);
+
+      const fileContents = fs.readFileSync("config.yml", "utf8");
+      const config: any = yaml.load(fileContents);
+
+      // const config = await getConfig(context, owner, repo);
 
       if (!config || !config.enabled) return;
 
