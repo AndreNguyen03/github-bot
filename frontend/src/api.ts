@@ -10,7 +10,7 @@ export async function getCurrentUser(): Promise<User | null> {
   if (!res.ok) {
     return null;
   }
-  const data = res.json();
+  const data = res.json();``
   return data;
 }
 
@@ -38,7 +38,7 @@ export async function handleAPIGetRepositories(accessToken: string) {
       throw new Error("Failed to fetch repositories");
     }
     return res.data;
-  } catch (err: unknown) {
+  } catch (err: any) {
     if (err instanceof RequestError) {
       switch (err.status) {
         case 401:
