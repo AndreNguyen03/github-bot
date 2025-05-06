@@ -1,189 +1,307 @@
-import { Probot } from "probot";
-//import OpenAI from "openai";
-// import { generateAIReview } from "./AI/reviewAI.js";
-// import { postInlineComment } from "./github.js";
-// import { Octokit } from "@octokit/rest";
-// import { extractContextualBlocks } from "./Process/extract.js";
-// import { findFirstPlusLinePosition } from "./Process/position.js";
-//const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-export default (app: Probot) => {
-  app.log.info("🚀 Bot đã sẵn sàng!");
+import { Probot, Context } from "probot";
+import { WebhookClient, EmbedBuilder } from "discord.js";
+import * as yaml from "js-yaml";
+import { OpenAI } from "openai";
 
-  // app.on("pull_request.opened", async (context) => {
-  //   const { owner, repo } = context.repo();
-  //   const prNumber = context.payload.pull_request.number;
-  //   app.log.info(`📦 Đang xử lý PR #${prNumber} tại ${owner}/${repo}`);
+// Định nghĩa cấu trúc cho config.yml
+interface BotConfig {
+  enabled: boolean;
+  welcome_comment: {
+    enabled: boolean;
+    issue: { enabled: boolean; message: string };
+  };
+  auto_label: {
+    enabled: boolean;
+    issue: { enabled: boolean; labels: string[] };
+  };
+  auto_assign: { enabled: boolean };
+  discord_notifications: {
+    enabled: boolean;
+    webhook_url: string;
+    events: string[];
+  };
+}
 
-  //   const filesChanged = await context.octokit.pulls.listFiles({
-  //     owner,
-  //     repo,
-  //     pull_number: prNumber,
-  //   });
+// Định nghĩa cấu trúc commit summary
+interface CommitSummary {
+  author: string;
+  message: string;
+  files: string;
+}
 
-  //   for (const file of filesChanged.data) {
-  //     if (!file.patch) continue;
-  //     const addedBlocks = extractContextualBlocks(file.patch);
-  //     for (const block of addedBlocks) {
-  //       const blockContent = block.lines.join("\n");
-  //       const patchLines = file.patch.split("\n");
-
-  //       const position = findFirstPlusLinePosition(
-  //         patchLines,
-  //         block.startIndex
-  //       );
-
-  //       const aiFeedback = await generateAIReview(file.filename, blockContent);
-
-  //       if (aiFeedback && aiFeedback.trim() !== "") {
-  //         app.log.info(
-  //           `💬 Đang comment vào ${file.filename} tại dòng ${position}`
-  //         );
-  //         await postInlineComment(
-  //           context.octokit as unknown as Octokit,
-  //           owner,
-  //           repo,
-  //           prNumber,
-  //           {
-  //             ...file,
-  //             position,
-  //           },
-  //           aiFeedback
-  //         );
-  //       }
-  //     }
-  //   }
-  //   app.log.info("✅ Đã xử lý xong PR.");
-  // });
-  app.on(["pull_request.opened", "pull_request.reopened"], async (context) => {
-    const prComment = context.issue({
-      body: "Bạn đã tạo PR! PR của bạn sẽ được xem xét! Nice a day 😊",
+// Hàm đọc config.yml từ repository
+async function getConfig(context: Context, owner: string, repo: string): Promise<BotConfig | null> {
+  try {
+    const response = await context.octokit.repos.getContent({
+      owner,
+      repo,
+      path: ".github/config.yml",
     });
 
-    //app.log.info(`PR Number: ${context.payload.pull_request.number}`);
-    await context.octokit.issues.createComment(prComment);
-
-    const files = await context.octokit.pulls.listFiles(
-      context.pullRequest({ per_page: 100 })
-    );
-
-    //app.log.info(`Toàn bộ thông tin files.data: ${files}`);
-    const changedFiles = files.data.map((file) => file.filename);
-    //app.log.info(`Danh sách file thay đổi: ${changedFiles}`);
-
-    const labelsToAdd: string[] = [];
-
-    for (const file of changedFiles) {
-      if (file.includes("docs/") && !labelsToAdd.includes("documentation")) {
-        labelsToAdd.push("documentation");
-      }
-      if (file.includes("src/") && !labelsToAdd.includes("feature")) {
-        labelsToAdd.push("feature");
-      }
+    // Kiểm tra xem response.data là file hay thư mục
+    if (Array.isArray(response.data)) {
+      context.log.error(`Error: .github/config.yml is a directory in ${owner}/${repo}`);
+      return null;
     }
-    app.log.info(`Nhãn cần gắn: ${labelsToAdd}`);
-    if (labelsToAdd.length > 0) {
-      await context.octokit.issues.addLabels(
-        context.issue({ labels: labelsToAdd }) // ✅ dùng "labels"
-      );
-      app.log.info(`Đã gắn nhãn ${labelsToAdd}`);
+
+    // Đảm bảo response.data là file và có content
+    if (!("content" in response.data)) {
+      context.log.error(`Error: .github/config.yml has no content in ${owner}/${repo}`);
+      return null;
     }
-    app.log.info(`Xong`);
+
+    const content = Buffer.from(response.data.content, "base64").toString();
+    return yaml.load(content) as BotConfig;
+  } catch (error) {
+    context.log.error(`Error reading config.yml in ${owner}/${repo}: ${error}`);
+    return null;
+  }
+}
+
+// Hàm gửi thông báo Discord
+async function sendDiscordNotification(
+  webhookUrl: string,
+  message: string,
+  embedTitle: string,
+  embedUrl?: string,
+): Promise<void> {
+  try {
+    const webhookClient = new WebhookClient({ url: webhookUrl });
+    const embed = new EmbedBuilder()
+      .setTitle(embedTitle)
+      .setDescription(message)
+      .setColor(0x00ff00)
+      .setTimestamp();
+
+    if (embedUrl) {
+      embed.setURL(embedUrl);
+    }
+
+    await webhookClient.send({ embeds: [embed] });
+  } catch (error) {
+  }
+}
+
+// Hàm tạo prompt cho OpenAI để gán assignee
+function buildAssigneePrompt(title: string, body: string, commits: CommitSummary[]): string {
+  const formattedCommits = commits.map(
+    (c) => `Author: ${c.author}\nMessage: ${c.message}\nFiles: ${c.files}`
+  );
+  return `
+    You are a helpful assistant for a GitHub repository.
+    Given the issue and recent commits, identify the most relevant developer to assign this issue to.
+    Consider commit authors, their recent changes, and files they worked on.
+    
+    Issue:
+    Title: ${title}
+    Body: ${body}
+    
+    Recent Commits:
+    ${formattedCommits.join("\n\n")}
+    
+    Reply with the GitHub username (e.g., @alice) of the best-suited developer.
+  `.trim();
+}
+
+// Hàm tạo prompt cho OpenAI để gán nhãn
+function buildLabelPrompt(content: string, labels: string[]): string {
+  return `
+    You are a helpful assistant. Review the issue content: ${content}
+    and label it appropriately from these labels: ${labels.join(", ")}.
+    Return only the suitable label, no explanation.
+  `.trim();
+}
+
+// Hàm lấy commit summaries
+async function getCommitSummaries(
+  context: Context,
+  owner: string,
+  repo: string,
+  limit: number = 10
+): Promise<CommitSummary[]> {
+  const commits = await context.octokit.repos.listCommits({
+    owner,
+    repo,
+    per_page: limit,
   });
 
-  // app.on("issue_comment.created", async (context) => {
-  //   const comment = context.payload.comment.body;
-  //   const repo = context.payload.repository;
-  //   const issueNumber = context.payload.issue.number;
+  const summaries: CommitSummary[] = [];
+  for (const commit of commits.data) {
+    const detail = await context.octokit.repos.getCommit({
+      owner,
+      repo,
+      ref: commit.sha,
+    });
+    summaries.push({
+      author: commit.author?.login || "unknown",
+      message: commit.commit.message,
+      files: detail.data.files?.map((f) => f.filename).join(", ") || "",
+    });
+  }
+  return summaries;
+}
 
-  //   // Kiểm tra xem comment có phải là lệnh "/ask"
-  //   if (comment.startsWith("/ask")) {
-  //     const question = comment.replace("/ask", "").trim();
+// Hàm chính xử lý bot
+export default (app: Probot) => {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  //     // Nếu người dùng không nhập câu hỏi
-  //     if (!question) {
-  //       await context.octokit.issues.createComment(
-  //         context.issue({ body: "❌ **Bạn cần nhập câu hỏi sau lệnh /ask!**" })
-  //       );
-  //       return;
-  //     }
+  // Xử lý issue.opened
+  app.on("issues.opened", async (context: Context<"issues.opened">) => {
+    const { issue, repository } = context.payload;
+    const owner = repository.owner.login;
+    const repo = repository.name;
+    const issueNumber = issue.number;
+    const config = await getConfig(context, owner, repo);
 
-  //     // Lấy nội dung PR
-  //     const pr = await context.octokit.pulls.get({
-  //       owner: repo.owner.login,
-  //       repo: repo.name,
-  //       pull_number: issueNumber,
-  //     });
+    if (!config || !config.enabled) {
+      app.log.info(`Bot disabled in ${owner}/${repo}`);
+      return;
+    }
 
-  //     const prContent = pr.data.body || "Không có mô tả PR.";
-
-  //     // Lấy danh sách file thay đổi để cung cấp bối cảnh
-  //     const { data: files } = await context.octokit.pulls.listFiles({
-  //       owner: repo.owner.login,
-  //       repo: repo.name,
-  //       pull_number: issueNumber,
-  //     });
-
-  //     let codeDiffs = "";
-  //     for (const file of files) {
-  //       if (file.patch) {
-  //         codeDiffs += `File: ${file.filename}\n${file.patch}\n\n`;
-  //       }
-  //     }
-
-  //     // Gửi câu hỏi và thông tin PR đến OpenAI
-  //     const aiResponse = await openai.chat.completions.create({
-  //       model: "gpt-4o-mini",
-  //       messages: [
-  //         {
-  //           role: "system",
-  //           content: "Bạn là một trợ lý phân tích mã nguồn thông minh.",
-  //         },
-  //         {
-  //           role: "user",
-  //           content: `Nội dung PR:\n\n${prContent}\n\nCode thay đổi:\n${codeDiffs}\n\nCâu hỏi của người dùng: ${question}`,
-  //         },
-  //       ],
-  //     });
-
-  //     const botReply =
-  //       aiResponse.choices[0]?.message?.content ||
-  //       "Không thể trả lời câu hỏi này.";
-
-  //     // Phản hồi lại người dùng
-  //     await context.octokit.issues.createComment(
-  //       context.issue({ body: `🤖 **Trả lời:** ${botReply}` })
-  //     );
-
-  //     app.log.info(
-  //       `📌 Đã trả lời câu hỏi của người dùng trong PR #${issueNumber}.`
-  //     );
-  //   }
-  // });
-
-  //người dùng tạo issuess
-
-  app.on("issue_comment.created", async (context) => {
-    // cấp quyền
-    if (!context.payload.issue.pull_request) return;
-    app.log.info("issue comment");
-    const commentBody = context.payload.comment.body.toLowerCase();
-    if (commentBody.includes("rv code")) {
+    // Welcome comment
+    if (config.welcome_comment.enabled && config.welcome_comment.issue.enabled) {
       await context.octokit.issues.createComment(
-        context.issue({ body: "Đã ghi nhận yêu cầu review, sẽ phản hồi sớm." })
+        context.issue({ body: config.welcome_comment.issue.message })
+      );
+      app.log.info(`Sent welcome comment to issue #${issueNumber}`);
+    }
+
+    // Auto-label
+    if (config.auto_label.enabled && config.auto_label.issue.enabled && issue.body) {
+      try {
+        const prompt = buildLabelPrompt(issue.body.toLowerCase(), config.auto_label.issue.labels);
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: "You are a helpful code review assistant." },
+            { role: "user", content: prompt },
+          ],
+        });
+        const label = response.choices[0].message.content?.trim();
+        if (label) {
+          await context.octokit.issues.addLabels(context.issue({ labels: [label] }));
+          app.log.info(`Added label "${label}" to issue #${issueNumber}`);
+        }
+      } catch (error) {
+        app.log.error(`Error labeling issue #${issueNumber}: ${error}`);
+      }
+    }
+
+    // Auto-assign
+    if (config.auto_assign.enabled && issue.body) {
+      try {
+        const commits = await getCommitSummaries(context, owner, repo);
+        const authors = new Set(commits.map((c) => c.author));
+
+        if (authors.size === 1) {
+          const [onlyAuthor] = authors;
+          await context.octokit.issues.addAssignees(
+            context.issue({ assignees: [onlyAuthor] })
+          );
+          app.log.info(`Assigned issue #${issueNumber} to @${onlyAuthor} (only contributor)`);
+        } else if (commits.length > 0) {
+          const prompt = buildAssigneePrompt(issue.title, issue.body, commits);
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+          });
+          const assignee = response.choices[0].message.content?.trim().replace("@", "");
+          if (assignee) {
+            await context.octokit.issues.addAssignees(
+              context.issue({ assignees: [assignee] })
+            );
+            app.log.info(`Assigned issue #${issueNumber} to @${assignee}`);
+          }
+        }
+      } catch (error) {
+        app.log.error(`Error assigning issue #${issueNumber}: ${error}`);
+      }
+    }
+
+    // Discord notification
+    if (config.discord_notifications.enabled && config.discord_notifications.events.includes("issue.opened")) {
+      const message = `New issue #${issueNumber} opened in ${owner}/${repo}: "${issue.title}"`;
+      await sendDiscordNotification(
+        config.discord_notifications.webhook_url,
+        message,
+        `Issue #${issueNumber} Opened`,
+        issue.html_url,
       );
     }
   });
 
-  app.on("issues.opened", async (context) => {
-    // const issueComment = context.issue({ body: "Cảm ơn bạn đã tạo issue!" });
-    // await context.octokit.issues.createComment(issueComment);
-    const issueBody = context.payload.issue.body?.toLowerCase() || "";
-    if (issueBody.includes("bug")) {
-      const issueLabel = context.issue({
-        labels: ["bug"],
-      });
-      await context.octokit.issues.addLabels(issueLabel);
-      app.log.info("Đã gắn nhãn bug cho issue");
+  // Xử lý issue_comment.created
+  app.on("issue_comment.created", async (context: Context<"issue_comment.created">) => {
+    const { issue, comment, repository } = context.payload;
+    const owner = repository.owner.login;
+    const repo = repository.name;
+    const issueNumber = issue.number;
+    const config = await getConfig(context, owner, repo);
+
+    if (!config || !config.enabled) return;
+
+    // Discord notification
+    if (config.discord_notifications.enabled && config.discord_notifications.events.includes("issue.commented")) {
+      const message = `New comment on issue #${issueNumber} in ${owner}/${repo} by ${comment.user.login}: "${comment.body.slice(0, 100)}..."`;
+      await sendDiscordNotification(
+        config.discord_notifications.webhook_url,
+        message,
+        `Comment on Issue #${issueNumber}`,
+        comment.html_url,
+      );
+    }
+  });
+
+  // Xử lý pull_request.opened và pull_request.reopened
+  app.on(["pull_request.opened", "pull_request.reopened"], async (context: Context<"pull_request.opened" | "pull_request.reopened">) => {
+    const { pull_request, repository } = context.payload;
+    const owner = repository.owner.login;
+    const repo = repository.name;
+    const prNumber = pull_request.number;
+    const config = await getConfig(context, owner, repo);
+
+    if (!config || !config.enabled) return;
+
+    // Welcome comment
+    await context.octokit.issues.createComment(
+      context.issue({ body: "Bạn đã tạo PR! PR của bạn sẽ được xem xét! Nice a day 😊" })
+    );
+    app.log.info(`Sent welcome comment to PR #${prNumber}`);
+
+
+    // Discord notification
+    if (config.discord_notifications.enabled && config.discord_notifications.events.includes("pull_request.opened")) {
+      const message = `New pull request #${prNumber} opened in ${owner}/${repo}: "${pull_request.title}"`;
+      await sendDiscordNotification(
+        config.discord_notifications.webhook_url,
+        message,
+        `Pull Request #${prNumber} Opened`,
+        pull_request.html_url,
+      );
+    }
+  });
+
+  // Xử lý pull_request.closed (merged)
+  app.on("pull_request.closed", async (context: Context<"pull_request.closed">) => {
+    const { pull_request, repository } = context.payload;
+    if (!pull_request.merged) return;
+
+    const owner = repository.owner.login;
+    const repo = repository.name;
+    const prNumber = pull_request.number;
+    const config = await getConfig(context, owner, repo);
+
+    if (!config || !config.enabled) return;
+
+    // Discord notification
+    if (config.discord_notifications.enabled && config.discord_notifications.events.includes("pull_request.merged")) {
+      const message = `Pull request #${prNumber} merged in ${owner}/${repo}: "${pull_request.title}"`;
+      await sendDiscordNotification(
+        config.discord_notifications.webhook_url,
+        message,
+        `Pull Request #${prNumber} Merged`,
+        pull_request.html_url,
+      );
     }
   });
 };
