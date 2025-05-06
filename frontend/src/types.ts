@@ -26,6 +26,8 @@ export interface Owner {
   login: string;
   id: number;
   avatar_url: string;
+  html_url: string;
+  type: string;
 }
 
 export interface Repository {
@@ -52,6 +54,12 @@ export interface Repository {
   anonymous_access_enabled?: boolean; // Thêm anonymous_access_enabled từ API
 }
 
+export interface RepositoryListResponse {
+  total_count: number;
+  repository_selection: string;
+  repositories: Repository[];
+}
+
 export interface Installation {
   id: number;
   account: {
@@ -74,8 +82,3 @@ export interface Installation {
   repository_selection: string;
   [key: string]: unknown;
 }
-
-// export interface InstallationListResponse {
-//   total_count: number;
-//   installations: Installation[];
-// }

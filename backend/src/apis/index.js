@@ -12,7 +12,7 @@ function api(app) {
     "/auth/github/callback",
     passport.authenticate("github", { failureRedirect: "/" }),
     (req, res) => {
-      res.redirect("http://localhost:5173/home");
+      res.redirect("http://localhost:5173");
     }
   );
 
