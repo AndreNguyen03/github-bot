@@ -1,4 +1,5 @@
 import { Probot } from "probot";
+import { summaryCodeChanges } from "./ai/summaryChanges.js";
 //import OpenAI from "openai";
 // import { generateAIReview } from "./AI/reviewAI.js";
 // import { postInlineComment } from "./github.js";
@@ -66,28 +67,43 @@ export default (app: Probot) => {
       context.pullRequest({ per_page: 100 })
     );
 
-    //app.log.info(`Toàn bộ thông tin files.data: ${files}`);
     const changedFiles = files.data.map((file) => file.filename);
-    //app.log.info(`Danh sách file thay đổi: ${changedFiles}`);
-
-    const labelsToAdd: string[] = [];
-
-    for (const file of changedFiles) {
-      if (file.includes("docs/") && !labelsToAdd.includes("documentation")) {
-        labelsToAdd.push("documentation");
-      }
-      if (file.includes("src/") && !labelsToAdd.includes("feature")) {
-        labelsToAdd.push("feature");
-      }
+    //app.log.info(`Toàn bộ thông tin files.data: ${files}`);
+    let allPatches = "";
+    for (const file of files.data) {
+      if (!file.patch) continue; // Bỏ file nhị phân hoặc không có diff
+      allPatches += `File: ${file.filename}\n${file.patch}\n\n`;
     }
-    app.log.info(`Nhãn cần gắn: ${labelsToAdd}`);
-    if (labelsToAdd.length > 0) {
-      await context.octokit.issues.addLabels(
-        context.issue({ labels: labelsToAdd }) // ✅ dùng "labels"
+    const summary = await summaryCodeChanges(
+      "Tổng thể Pull Request",
+      allPatches
+    );
+    if (summary && summary.trim() !== "") {
+      await context.octokit.issues.createComment(
+        context.issue({
+          body: `🤖 **Bản tóm tắt PR:** ${summary}`,
+        })
       );
-      app.log.info(`Đã gắn nhãn ${labelsToAdd}`);
+      const labelsToAdd: string[] = [];
+
+      for (const file of changedFiles) {
+        if (file.includes("docs/") && !labelsToAdd.includes("documentation")) {
+          labelsToAdd.push("documentation");
+        }
+        if (file.includes("src/") && !labelsToAdd.includes("feature")) {
+          labelsToAdd.push("feature");
+        }
+      }
+      app.log.info(`Nhãn cần gắn: ${labelsToAdd}`);
+      if (labelsToAdd.length > 0) {
+        await context.octokit.issues.addLabels(
+          context.issue({ labels: labelsToAdd }) // ✅ dùng "labels"
+        );
+        app.log.info(`Đã gắn nhãn ${labelsToAdd}`);
+      }
+
+      app.log.info(`Xong`);
     }
-    app.log.info(`Xong`);
   });
 
   // app.on("issue_comment.created", async (context) => {
@@ -174,16 +190,16 @@ export default (app: Probot) => {
     }
   });
 
-  app.on("issues.opened", async (context) => {
-    // const issueComment = context.issue({ body: "Cảm ơn bạn đã tạo issue!" });
-    // await context.octokit.issues.createComment(issueComment);
-    const issueBody = context.payload.issue.body?.toLowerCase() || "";
-    if (issueBody.includes("bug")) {
-      const issueLabel = context.issue({
-        labels: ["bug"],
-      });
-      await context.octokit.issues.addLabels(issueLabel);
-      app.log.info("Đã gắn nhãn bug cho issue");
-    }
-  });
+  // app.on("issues.opened", async (context) => {
+  //   // const issueComment = context.issue({ body: "Cảm ơn bạn đã tạo issue!" });
+  //   // await context.octokit.issues.createComment(issueComment);
+  //   const issueBody = context.payload.issue.body?.toLowerCase() || "";
+  //   if (issueBody.includes("bug")) {
+  //     const issueLabel = context.issue({
+  //       labels: ["bug"],
+  //     });
+  //     await context.octokit.issues.addLabels(issueLabel);
+  //     app.log.info("Đã gắn nhãn bug cho issue");
+  //   }
+  // });
 };

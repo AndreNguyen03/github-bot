@@ -9,13 +9,36 @@ function App() {
   return (
     <Router>
       <>
-        {!window.location.pathname.includes("/login") && <Header />}
         <div className="container mx-auto mt-16 p-4">
           <Routes>
-            <Route path="/" element={<RepositoryPage />} />
+            <Route
+              path="/"
+              element={
+                <>
+                  <Header />
+                  <RepositoryPage />
+                </>
+              }
+            />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/repositories" element={<RepositoryPage />} />
-            <Route path="/configuration" element={<ConfigurationPage />} />
+            <Route
+              path="/repositories"
+              element={
+                <>
+                  <Header />
+                  <RepositoryPage />
+                </>
+              }
+            />
+            <Route
+              path="/configuration"
+              element={
+                <>
+                  <Header />
+                  <ConfigurationPage />
+                </>
+              }
+            />
             {/* <Route path="/installation" element={<InstallationPage />} /> */}
             <Route path="*" element={<div>404 - Page Not Found</div>} />
           </Routes>

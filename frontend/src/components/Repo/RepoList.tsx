@@ -42,7 +42,10 @@ const RepoList: React.FC<Props> = ({ repositoriesListResponse }) => {
                   ? " bg-green-400 text-white hover:bg-green-500"
                   : " bg-gray-400 text-gray-200")
               }
-              onClick={() => navigate("/config")}
+              onClick={() =>
+                navigate("/configuration", { state: selectedRepos })
+              }
+              disabled={selectedRepos.length === 0}
             >
               Go to Config
             </button>
