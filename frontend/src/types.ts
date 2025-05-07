@@ -82,3 +82,48 @@ export interface Installation {
   repository_selection: string;
   [key: string]: unknown;
 }
+
+export interface FontendConfig {
+  labelIssue: boolean;
+  labelPR: boolean;
+  assignLeader: boolean;
+  assignBest: boolean;
+  msgIssue: string;
+  msgPR: string;
+  changedSummary: boolean;
+  discord: boolean;
+  customLabel: string;
+}
+
+export interface ConfigState {
+  enabled: boolean;
+
+  welcome_comment: {
+    enabled: boolean;
+    issue: { enabled: boolean; message: string };
+    pull_request: { enabled: boolean; message: string };
+  };
+
+  auto_label: {
+    enabled: boolean;
+    ai_model: "gpt4omin" | string; // Default option "grok"
+    issue: { enabled: boolean; labels: string[] };
+    pull_request: { enabled: boolean; labels: string[] };
+  };
+
+  auto_assign: { enabled: boolean };
+
+  discord_notifications: {
+    enabled: boolean;
+    webhook_url: string;
+    events: string[];
+  };
+
+  pr_summary: { enabled: boolean; ai_model: string; max_length: number };
+
+  scan: {
+    enabled: boolean;
+    issue: { enabled: boolean; prompt: string };
+    pull_request: { enabled: boolean; prompt: string };
+  };
+}
