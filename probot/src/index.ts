@@ -1,141 +1,20 @@
 import { Probot, Context } from "probot";
-import { WebhookClient, EmbedBuilder } from "discord.js";
 import * as fs from "fs";
 import * as yaml from "js-yaml";
 import { OpenAI } from "openai";
-import { summaryCodeChanges } from "./ai/summaryChanges.js";
-import { scanIssueFormat } from "./ai/scanIssueFormat.js";
-import { scanPullRequestFormat } from "./ai/scanPullRequestFormat.js";
-
-// Định nghĩa cấu trúc commit summary
-interface CommitSummary {
-  author: string;
-  message: string;
-  files: string;
-}
-
-// Hàm đọc config.yml từ repository
-// async function getConfig(
-//   context: Context,
-//   owner: string,
-//   repo: string
-// ): Promise<BotConfig | null> {
-//   try {
-//     const response = await context.octokit.repos.getContent({
-//       owner,
-//       repo,
-//       path: ".github/config.yml",
-//     });
-
-//     // Kiểm tra xem response.data là file hay thư mục
-//     if (Array.isArray(response.data)) {
-//       context.log.error(
-//         `Error: .github/config.yml is a directory in ${owner}/${repo}`
-//       );
-//       return null;
-//     }
-
-//     // Đảm bảo response.data là file và có content
-//     if (!("content" in response.data)) {
-//       context.log.error(
-//         `Error: .github/config.yml has no content in ${owner}/${repo}`
-//       );
-//       return null;
-//     }
-
-//     const content = Buffer.from(response.data.content, "base64").toString();
-//     return yaml.load(content) as BotConfig;
-//   } catch (error) {
-//     context.log.error(`Error reading config.yml in ${owner}/${repo}: ${error}`);
-//     return null;
-//   }
-// }
-
-// Hàm gửi thông báo Discord
-async function sendDiscordNotification(
-  webhookUrl: string,
-  message: string,
-  embedTitle: string,
-  embedUrl?: string
-): Promise<void> {
-  try {
-    const webhookClient = new WebhookClient({ url: webhookUrl });
-    const embed = new EmbedBuilder()
-      .setTitle(embedTitle)
-      .setDescription(message)
-      .setColor(0x00ff00)
-      .setTimestamp();
-
-    if (embedUrl) {
-      embed.setURL(embedUrl);
-    }
-
-    await webhookClient.send({ embeds: [embed] });
-  } catch (error) {}
-}
-
-// Hàm tạo prompt cho OpenAI để gán assignee
-function buildAssigneePrompt(
-  title: string,
-  body: string,
-  commits: CommitSummary[]
-): string {
-  const formattedCommits = commits.map(
-    (c) => `Author: ${c.author}\nMessage: ${c.message}\nFiles: ${c.files}`
-  );
-  return `
-    You are a helpful assistant for a GitHub repository.
-    Given the issue and recent commits, identify the most relevant developer to assign this issue to.
-    Consider commit authors, their recent changes, and files they worked on.
-    
-    Issue:
-    Title: ${title}
-    Body: ${body}
-    
-    Recent Commits:
-    ${formattedCommits.join("\n\n")}
-    
-    Reply with the GitHub username (e.g., @alice) of the best-suited developer.
-  `.trim();
-}
-
-// Hàm tạo prompt cho OpenAI để gán nhãn
-function buildLabelPrompt(content: string, labels: string[]): string {
-  return `
-    You are a helpful assistant. Review the issue content: ${content}
-    and label it appropriately from these labels: ${labels.join(", ")}.
-    Return only the suitable label, no explanation.
-  `.trim();
-}
-
-// Hàm lấy commit summaries
-async function getCommitSummaries(
-  context: Context,
-  owner: string,
-  repo: string,
-  limit: number = 10
-): Promise<CommitSummary[]> {
-  const commits = await context.octokit.repos.listCommits({
-    owner,
-    repo,
-    per_page: limit,
-  });
-
-  const summaries: CommitSummary[] = [];
-  for (const commit of commits.data) {
-    const detail = await context.octokit.repos.getCommit({
-      owner,
-      repo,
-      ref: commit.sha,
-    });
-    summaries.push({
-      author: commit.author?.login || "unknown",
-      message: commit.commit.message,
-      files: detail.data.files?.map((f) => f.filename).join(", ") || "",
-    });
-  }
-  return summaries;
-}
+import { handleWelcomeComment } from "./handler/handler-welcome-comment.js";
+import { handleAutoLabel } from "./handler/handler-autolabel.js";
+import { handleAutoAssign } from "./handler/handler-autoassign.js";
+import {
+  handleNotificationIssueComment,
+  handleNotificationPullRequestClose,
+  handleNotificationPullRequestOpen,
+} from "./handler/handler-notification.js";
+import { handlePrSummary } from "./handler/handle-prsummary.js";
+import {
+  handleScanIssue,
+  handleScanPullRequest,
+} from "./handler/handle-scan.js";
 
 // Hàm chính xử lý bot
 export default (app: Probot) => {
@@ -143,11 +22,9 @@ export default (app: Probot) => {
 
   // Xử lý issue.opened
   app.on("issues.opened", async (context: Context<"issues.opened">) => {
-    const { issue, repository } = context.payload;
-    const { title, body } = issue;
+    const { repository } = context.payload;
     const owner = repository.owner.login;
     const repo = repository.name;
-    const issueNumber = issue.number;
 
     const fileContents = fs.readFileSync("config.yml", "utf8");
     const config: any = yaml.load(fileContents);
@@ -166,78 +43,17 @@ export default (app: Probot) => {
       config.welcome_comment.enabled &&
       config.welcome_comment.issue.enabled
     ) {
-      await context.octokit.issues.createComment(
-        context.issue({ body: config.welcome_comment.issue.message })
-      );
-      app.log.info(`Sent welcome comment to issue #${issueNumber}`);
+      await handleWelcomeComment(context, app, config);
     }
 
     // Auto-label
-    if (
-      config.auto_label.enabled &&
-      config.auto_label.issue.enabled &&
-      issue.body
-    ) {
-      try {
-        const prompt = buildLabelPrompt(
-          issue.body.toLowerCase(),
-          config.auto_label.issue.labels
-        );
-        const response = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful code review assistant.",
-            },
-            { role: "user", content: prompt },
-          ],
-        });
-        const label = response.choices[0].message.content?.trim();
-        if (label) {
-          await context.octokit.issues.addLabels(
-            context.issue({ labels: [label] })
-          );
-          app.log.info(`Added label "${label}" to issue #${issueNumber}`);
-        }
-      } catch (error) {
-        app.log.error(`Error labeling issue #${issueNumber}: ${error}`);
-      }
+    if (config.auto_label.enabled && config.auto_label.issue.enabled) {
+      await handleAutoLabel(context, app, config, openai);
     }
 
     // Auto-assign
-    if (config.auto_assign.enabled && issue.body) {
-      try {
-        const commits = await getCommitSummaries(context, owner, repo);
-        const authors = new Set(commits.map((c) => c.author));
-
-        if (authors.size === 1) {
-          const [onlyAuthor] = authors;
-          await context.octokit.issues.addAssignees(
-            context.issue({ assignees: [onlyAuthor] })
-          );
-          app.log.info(
-            `Assigned issue #${issueNumber} to @${onlyAuthor} (only contributor)`
-          );
-        } else if (commits.length > 0) {
-          const prompt = buildAssigneePrompt(issue.title, issue.body, commits);
-          const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: prompt }],
-          });
-          const assignee = response.choices[0].message.content
-            ?.trim()
-            .replace("@", "");
-          if (assignee) {
-            await context.octokit.issues.addAssignees(
-              context.issue({ assignees: [assignee] })
-            );
-            app.log.info(`Assigned issue #${issueNumber} to @${assignee}`);
-          }
-        }
-      } catch (error) {
-        app.log.error(`Error assigning issue #${issueNumber}: ${error}`);
-      }
+    if (config.auto_assign.enabled) {
+      await handleAutoAssign(context, app, openai);
     }
 
     // Discord notification
@@ -245,43 +61,12 @@ export default (app: Probot) => {
       config.discord_notifications.enabled &&
       config.discord_notifications.events.includes("issue.opened")
     ) {
-      const message = `New issue #${issueNumber} opened in ${owner}/${repo}: "${issue.title}"`;
-      await sendDiscordNotification(
-        config.discord_notifications.webhook_url,
-        message,
-        `Issue #${issueNumber} Opened`,
-        issue.html_url
-      );
+      await handleNotificationIssueComment(context, app, config);
     }
 
     // scan issue
     if (config.scan.issue.enabled && config.scan.issue.prompt) {
-      const { isValid, feedback } = await scanIssueFormat(
-        title,
-        body,
-        config.scan.issue.prompt
-      );
-      app.log.info(`Issue format validation result: ${isValid} ${feedback}`);
-      if (!isValid) {
-        await context.octokit.issues.createComment({
-          owner,
-          repo,
-          issue_number: issueNumber,
-          body: `❌ **Issue không đúng định dạng chuẩn.**\n\n${feedback}`,
-        });
-
-        await context.octokit.issues.update({
-          owner,
-          repo,
-          issue_number: issueNumber,
-          state: "closed",
-        });
-
-        await context.octokit.issues.addLabels(
-          context.issue({ labels: ["invalid"] })
-        );
-        app.log.info(`Added label "invalid" to issue #${issueNumber}`);
-      }
+      await handleScanIssue(context, app, config);
     }
   });
 
@@ -289,15 +74,14 @@ export default (app: Probot) => {
   app.on(
     "issue_comment.created",
     async (context: Context<"issue_comment.created">) => {
-      const { issue, comment, repository } = context.payload;
-      const owner = repository.owner.login;
-      const repo = repository.name;
-      const issueNumber = issue.number;
+      // const { repository } = context.payload;
+      // const owner = repository.owner.login;
+      // const repo = repository.name;
+
+      // const config = await getConfig(context, owner, repo);
 
       const fileContents = fs.readFileSync("config.yml", "utf8");
       const config: any = yaml.load(fileContents);
-
-      // const config = await getConfig(context, owner, repo);
 
       if (!config || !config.enabled) return;
 
@@ -306,15 +90,7 @@ export default (app: Probot) => {
         config.discord_notifications.enabled &&
         config.discord_notifications.events.includes("issue.commented")
       ) {
-        const message = `New comment on issue #${issueNumber} in ${owner}/${repo} by ${
-          comment.user.login
-        }: "${comment.body.slice(0, 100)}..."`;
-        await sendDiscordNotification(
-          config.discord_notifications.webhook_url,
-          message,
-          `Comment on Issue #${issueNumber}`,
-          comment.html_url
-        );
+        await handleNotificationIssueComment(context, app, config);
       }
     }
   );
@@ -325,11 +101,9 @@ export default (app: Probot) => {
     async (
       context: Context<"pull_request.opened" | "pull_request.reopened">
     ) => {
-      const { pull_request, repository } = context.payload;
-      const { title, body } = pull_request;
-      const owner = repository.owner.login;
-      const repo = repository.name;
-      const prNumber = pull_request.number;
+      // const { repository } = context.payload;
+      // const owner = repository.owner.login;
+      // const repo = repository.name;
 
       const fileContents = fs.readFileSync("config.yml", "utf8");
       const config: any = yaml.load(fileContents);
@@ -338,89 +112,19 @@ export default (app: Probot) => {
 
       if (!config || !config.enabled) return;
 
-      const prComment = context.issue({
-        body: "Bạn đã tạo PR! PR của bạn sẽ được xem xét! Nice a day 😊",
-      });
-
-      //app.log.info(`PR Number: ${context.payload.pull_request.number}`);
-      await context.octokit.issues.createComment(prComment);
-
-      const files = await context.octokit.pulls.listFiles(
-        context.pullRequest({ per_page: 100 })
-      );
-
-      //app.log.info(`Toàn bộ thông tin files.data: ${files}`);
-      let allPatches = "";
-      for (const file of files.data) {
-        if (!file.patch) continue; // Bỏ file nhị phân hoặc không có diff
-        allPatches += `File: ${file.filename}\n${file.patch}\n\n`;
+      if (config.prSummary.enabled) {
+        await handlePrSummary(context);
       }
-      const summary = await summaryCodeChanges(
-        "Tổng thể Pull Request",
-        allPatches
-      );
-      if (summary && summary.trim() !== "") {
-        await context.octokit.issues.createComment(
-          context.issue({
-            body: `🤖 **Bản tóm tắt PR:**\n ${summary}`,
-          })
-        );
-      }
-      app.log.info("summaryCodeChanges");
-      // Discord notification
-
       if (
         config.discord_notifications.enabled &&
         config.discord_notifications.events.includes("pull_request.opened")
       ) {
-        const message = `New pull request #${prNumber} opened in ${owner}/${repo}: "${pull_request.title}"`;
-        await sendDiscordNotification(
-          config.discord_notifications.webhook_url,
-          message,
-          `Pull Request #${prNumber} Opened`,
-          pull_request.html_url
-        );
+        await handleNotificationPullRequestOpen(context, app, config);
       }
-      app.log.info(" Discord notification");
+
       // scan pull request
-
       if (config.scan.pull_request.enabled && config.scan.pull_request.prompt) {
-        const { isValid, feedback } = await scanPullRequestFormat(
-          title,
-          body,
-          config.scan.pull_request.prompt
-        );
-        app.log.info(isValid, feedback);
-        app.log.info(
-          `Pull Request format validation result: ${isValid} ${feedback}`
-        );
-        if (!isValid) {
-          await context.octokit.issues.createComment({
-            owner,
-            repo,
-            issue_number: prNumber,
-            body: `❌ **Pull Request không đúng định dạng chuẩn.**\n\n${feedback}`,
-          });
-
-          await context.octokit.issues.update({
-            owner,
-            repo,
-            issue_number: prNumber,
-            state: "closed",
-          });
-
-          await context.octokit.issues.addLabels(
-            context.issue({ labels: ["invalid"] })
-          );
-          app.log.info(`Added label "invalid" to pr #${prNumber}`);
-        } else {
-          await context.octokit.issues.removeLabel({
-            owner,
-            repo,
-            issue_number: prNumber,
-            name: "invalid",
-          });
-        }
+        await handleScanPullRequest(context, app, config);
       }
     }
   );
@@ -429,12 +133,12 @@ export default (app: Probot) => {
   app.on(
     "pull_request.closed",
     async (context: Context<"pull_request.closed">) => {
-      const { pull_request, repository } = context.payload;
+      const { pull_request } = context.payload;
+      // const { repository} = context.payload;
       if (!pull_request.merged) return;
 
-      const owner = repository.owner.login;
-      const repo = repository.name;
-      const prNumber = pull_request.number;
+      // const owner = repository.owner.login;
+      // const repo = repository.name;
 
       const fileContents = fs.readFileSync("config.yml", "utf8");
       const config: any = yaml.load(fileContents);
@@ -448,13 +152,7 @@ export default (app: Probot) => {
         config.discord_notifications.enabled &&
         config.discord_notifications.events.includes("pull_request.merged")
       ) {
-        const message = `Pull request #${prNumber} merged in ${owner}/${repo}: "${pull_request.title}"`;
-        await sendDiscordNotification(
-          config.discord_notifications.webhook_url,
-          message,
-          `Pull Request #${prNumber} Merged`,
-          pull_request.html_url
-        );
+        await handleNotificationPullRequestClose(context, app, config);
       }
     }
   );
