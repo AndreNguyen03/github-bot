@@ -10,7 +10,8 @@ import {
   handleNotificationPullRequestClose,
   handleNotificationPullRequestOpen,
 } from "./handler/handler-notification.js";
-import { handlePrSummary } from "./handler/handle-prsummary.js";
+import { handlePrSummary } from "./handler/handler-prsummary.js";
+import { handleAiReviewPullRequest } from "./handler/handler-ai-review.js";
 
 // Hàm chính xử lý bot
 export default (app: Probot) => {
@@ -97,12 +98,15 @@ export default (app: Probot) => {
 
       const fileContents = fs.readFileSync("config.yml", "utf8");
       const config: any = yaml.load(fileContents);
+      console.log(config);
+
+      app.log.info(`config : ${config}}`);
 
       // const config = await getConfig(context, owner, repo);
 
       if (!config || !config.enabled) return;
 
-      if (config.prSummary.enabled) {
+      if (config.pr_summary.enabled) {
         await handlePrSummary(context);
       }
       // Discord notification
@@ -139,6 +143,18 @@ export default (app: Probot) => {
         config.discord_notifications.events.includes("pull_request.merged")
       ) {
         await handleNotificationPullRequestClose(context, app, config);
+      }
+    }
+  );
+
+  app.on(
+    "pull_request.labeled",
+    async (context: Context<"pull_request.labeled">) => {
+      const fileContents = fs.readFileSync("config.yml", "utf-8");
+      const config: any = yaml.load(fileContents);
+
+      if (config.ai_pr_review_while_labeled.enabled) {
+        await handleAiReviewPullRequest(context, app, config);
       }
     }
   );

@@ -52,3 +52,7 @@ pr_summary:
   enabled: true # Bật/tắt tính năng
   ai_model: "grok" # Mô hình AI sử dụng
   max_length: 200 # Độ dài tối đa của tóm tắt (ký tự)
+
+ai_pr_review_while_labeled:
+  enabled: true
+  label: ai-review
