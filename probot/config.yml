@@ -62,3 +62,8 @@ scan:
   pull_request:
     enabled: true # Bật/tắt tính năng cho Pull Requests
     prompt: "Hãy kiểm tra xem pull request này có tuân thủ đúng template sau không:\n---\n##Tiêu đề \n## Mục đích \n## Kiểm thử\n- Ví dụ: [x] Unit tests đã được thêm/cập nhật\n## Checklist\n ví dụ- [x] Code tuân thủ style guide của dự án \n## Lưu ý cho reviewer\n[Bất kỳ thông tin nào người review cần lưu ý]"
+
+
+ai_pr_review_while_labeled:
+  enabled: true
+  label: ai-review
