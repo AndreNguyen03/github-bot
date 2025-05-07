@@ -4,24 +4,8 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import { OpenAI } from "openai";
 import { summaryCodeChanges } from "./ai/summaryChanges.js";
-// Định nghĩa cấu trúc cho config.yml
-interface BotConfig {
-  enabled: boolean;
-  welcome_comment: {
-    enabled: boolean;
-    issue: { enabled: boolean; message: string };
-  };
-  auto_label: {
-    enabled: boolean;
-    issue: { enabled: boolean; labels: string[] };
-  };
-  auto_assign: { enabled: boolean };
-  discord_notifications: {
-    enabled: boolean;
-    webhook_url: string;
-    events: string[];
-  };
-}
+import { scanIssueFormat } from "./ai/scanIssueFormat.js";
+import { scanPullRequestFormat } from "./ai/scanPullRequestFormat.js";
 
 // Định nghĩa cấu trúc commit summary
 interface CommitSummary {
@@ -160,6 +144,7 @@ export default (app: Probot) => {
   // Xử lý issue.opened
   app.on("issues.opened", async (context: Context<"issues.opened">) => {
     const { issue, repository } = context.payload;
+    const { title, body } = issue;
     const owner = repository.owner.login;
     const repo = repository.name;
     const issueNumber = issue.number;
@@ -167,6 +152,7 @@ export default (app: Probot) => {
     const fileContents = fs.readFileSync("config.yml", "utf8");
     const config: any = yaml.load(fileContents);
 
+    //app.log.info(`Config: ${JSON.stringify(config)}`);
     // const config = await getConfig(context, owner, repo);
 
     if (!config || !config.enabled) {
@@ -267,6 +253,36 @@ export default (app: Probot) => {
         issue.html_url
       );
     }
+
+    // scan issue
+    if (config.scan.issue.enabled && config.scan.issue.prompt) {
+      const { isValid, feedback } = await scanIssueFormat(
+        title,
+        body,
+        config.scan.issue.prompt
+      );
+      app.log.info(`Issue format validation result: ${isValid} ${feedback}`);
+      if (!isValid) {
+        await context.octokit.issues.createComment({
+          owner,
+          repo,
+          issue_number: issueNumber,
+          body: `❌ **Issue không đúng định dạng chuẩn.**\n\n${feedback}`,
+        });
+
+        await context.octokit.issues.update({
+          owner,
+          repo,
+          issue_number: issueNumber,
+          state: "closed",
+        });
+
+        await context.octokit.issues.addLabels(
+          context.issue({ labels: ["invalid"] })
+        );
+        app.log.info(`Added label "invalid" to issue #${issueNumber}`);
+      }
+    }
   });
 
   // Xử lý issue_comment.created
@@ -310,6 +326,7 @@ export default (app: Probot) => {
       context: Context<"pull_request.opened" | "pull_request.reopened">
     ) => {
       const { pull_request, repository } = context.payload;
+      const { title, body } = pull_request;
       const owner = repository.owner.login;
       const repo = repository.name;
       const prNumber = pull_request.number;
@@ -349,7 +366,9 @@ export default (app: Probot) => {
           })
         );
       }
+      app.log.info("summaryCodeChanges");
       // Discord notification
+
       if (
         config.discord_notifications.enabled &&
         config.discord_notifications.events.includes("pull_request.opened")
@@ -361,6 +380,47 @@ export default (app: Probot) => {
           `Pull Request #${prNumber} Opened`,
           pull_request.html_url
         );
+      }
+      app.log.info(" Discord notification");
+      // scan pull request
+
+      if (config.scan.pull_request.enabled && config.scan.pull_request.prompt) {
+        const { isValid, feedback } = await scanPullRequestFormat(
+          title,
+          body,
+          config.scan.pull_request.prompt
+        );
+        app.log.info(isValid, feedback);
+        app.log.info(
+          `Pull Request format validation result: ${isValid} ${feedback}`
+        );
+        if (!isValid) {
+          await context.octokit.issues.createComment({
+            owner,
+            repo,
+            issue_number: prNumber,
+            body: `❌ **Pull Request không đúng định dạng chuẩn.**\n\n${feedback}`,
+          });
+
+          await context.octokit.issues.update({
+            owner,
+            repo,
+            issue_number: prNumber,
+            state: "closed",
+          });
+
+          await context.octokit.issues.addLabels(
+            context.issue({ labels: ["invalid"] })
+          );
+          app.log.info(`Added label "invalid" to pr #${prNumber}`);
+        } else {
+          await context.octokit.issues.removeLabel({
+            owner,
+            repo,
+            issue_number: prNumber,
+            name: "invalid",
+          });
+        }
       }
     }
   );
