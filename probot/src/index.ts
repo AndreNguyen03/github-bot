@@ -11,6 +11,10 @@ import {
   handleNotificationPullRequestOpen,
 } from "./handler/handler-notification.js";
 import { handlePrSummary } from "./handler/handler-prsummary.js";
+import {
+  handleScanIssue,
+  handleScanPullRequest,
+} from "./handler/handle-scan.js";
 import { handleAiReviewPullRequest } from "./handler/handler-ai-review.js";
 
 // Hàm chính xử lý bot
@@ -26,6 +30,7 @@ export default (app: Probot) => {
     const fileContents = fs.readFileSync("config.yml", "utf8");
     const config: any = yaml.load(fileContents);
 
+    //app.log.info(`Config: ${JSON.stringify(config)}`);
     // const config = await getConfig(context, owner, repo);
 
     if (!config || !config.enabled) {
@@ -58,6 +63,11 @@ export default (app: Probot) => {
       config.discord_notifications.events.includes("issue.opened")
     ) {
       await handleNotificationIssueComment(context, app, config);
+    }
+
+    // scan issue
+    if (config.scan.issue.enabled && config.scan.issue.prompt) {
+      await handleScanIssue(context, app, config);
     }
   });
 
@@ -109,12 +119,16 @@ export default (app: Probot) => {
       if (config.pr_summary.enabled) {
         await handlePrSummary(context);
       }
-      // Discord notification
       if (
         config.discord_notifications.enabled &&
         config.discord_notifications.events.includes("pull_request.opened")
       ) {
         await handleNotificationPullRequestOpen(context, app, config);
+      }
+
+      // scan pull request
+      if (config.scan.pull_request.enabled && config.scan.pull_request.prompt) {
+        await handleScanPullRequest(context, app, config);
       }
     }
   );

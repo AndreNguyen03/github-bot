@@ -46,7 +46,7 @@ const RepoItem: React.FC<RepoItemProps> = ({
           <label className="flex items-center">
             <input
               type="checkbox"
-              className="mr-2"
+              className="mr-4 h-4"
               checked={checked}
               onChange={() => {
                 handleCheck(repo.id.toString());

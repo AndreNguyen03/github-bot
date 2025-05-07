@@ -53,6 +53,17 @@ pr_summary:
   ai_model: "grok" # Mô hình AI sử dụng
   max_length: 200 # Độ dài tối đa của tóm tắt (ký tự)
 
+#Tính năng scan nội dung issue và pr
+scan:
+  enabled: true # Bật/tắt tính năng
+  issue:
+    enabled: true # Bật/tắt tính năng cho Issues
+    prompt: "Hãy kiểm tra xem issue này có tuân thủ đúng template sau không:\n---\n##Tiêu đề [Tiêu đề mô tả sơ lược về issue]\n## Mô tả\n## Bước tái hiện\n## Hành vi hiện tại\n## Hành vi mong muốn\n## Thông tin bổ sung\n## Ảnh chụp màn hình"
+  pull_request:
+    enabled: true # Bật/tắt tính năng cho Pull Requests
+    prompt: "Hãy kiểm tra xem pull request này có tuân thủ đúng template sau không:\n---\n##Tiêu đề \n## Mục đích \n## Kiểm thử\n- Ví dụ: [x] Unit tests đã được thêm/cập nhật\n## Checklist\n ví dụ- [x] Code tuân thủ style guide của dự án \n## Lưu ý cho reviewer\n[Bất kỳ thông tin nào người review cần lưu ý]"
+
+
 ai_pr_review_while_labeled:
   enabled: true
   label: ai-review
