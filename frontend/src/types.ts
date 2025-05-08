@@ -54,6 +54,22 @@ export interface Repository {
   anonymous_access_enabled?: boolean; // Thêm anonymous_access_enabled từ API
 }
 
+export interface TempRepository {
+  id: number;
+  name: string;
+  owner: Owner;
+}
+
+export interface PushYamlParams {
+  accessToken: string;
+  repoOwnerName: string;
+  repoName: string;
+  branch: string;
+  filePath: string;
+  yamlContent: string;
+  commitMessage?: string;
+}
+
 export interface RepositoryListResponse {
   total_count: number;
   repository_selection: string;
@@ -83,35 +99,59 @@ export interface Installation {
   [key: string]: unknown;
 }
 
-export interface FontendConfig {
-  labelIssue: boolean;
-  labelPR: boolean;
-  assignLeader: boolean;
-  assignBest: boolean;
-  msgIssue: string;
-  msgPR: string;
-  changedSummary: boolean;
-  discord: boolean;
-  customLabel: string;
+export interface UIConfigState {
+  // LABEL - auto_label.issue / pull_request
+  autoLabelIssue: boolean;
+  autoLabelPullRequest: boolean;
+
+  // ASSIGN - không có sẵn trong YAML nên sẽ cần mapping lại
+  assign: boolean;
+
+  // WELCOME MESSAGE
+  welcomeCommentIssueEnabled: boolean;
+  welcomeCommentIssueMessage: string;
+  welcomeCommentPullRequestEnabled: boolean;
+  welcomeCommentPullRequestMessage: string;
+
+  // PR SUMMARY
+  prSummaryEnabled: boolean;
+
+  // DISCORD
+  discordEnabled: boolean;
+  discordLabel: string;
 }
 
-export interface ConfigState {
+export interface BotConfig {
   enabled: boolean;
 
   welcome_comment: {
     enabled: boolean;
-    issue: { enabled: boolean; message: string };
-    pull_request: { enabled: boolean; message: string };
+    issue: {
+      enabled: boolean;
+      message: string;
+    };
+    pull_request: {
+      enabled: boolean;
+      message: string;
+    };
   };
 
   auto_label: {
     enabled: boolean;
-    ai_model: "gpt4omin" | string; // Default option "grok"
-    issue: { enabled: boolean; labels: string[] };
-    pull_request: { enabled: boolean; labels: string[] };
+    ai_model: string;
+    issue: {
+      enabled: boolean;
+      labels: string[];
+    };
+    pull_request: {
+      enabled: boolean;
+      labels: string[];
+    };
   };
 
-  auto_assign: { enabled: boolean };
+  auto_assign: {
+    enabled: boolean;
+  };
 
   discord_notifications: {
     enabled: boolean;
@@ -119,11 +159,81 @@ export interface ConfigState {
     events: string[];
   };
 
-  pr_summary: { enabled: boolean; ai_model: string; max_length: number };
+  pr_summary: {
+    enabled: boolean;
+    ai_model: string;
+    max_length: number;
+  };
 
   scan: {
     enabled: boolean;
-    issue: { enabled: boolean; prompt: string };
-    pull_request: { enabled: boolean; prompt: string };
+    issue: {
+      enabled: boolean;
+      prompt: string;
+    };
+    pull_request: {
+      enabled: boolean;
+      prompt: string;
+    };
   };
 }
+
+// export interface SubFeatureConfig {
+//   enabled: boolean;
+//   message?: string;
+//   labels?: string[];
+//   prompt?: string;
+// }
+
+// export interface FeatureConfig {
+//   enabled: boolean;
+//   issue?: SubFeatureConfig;
+//   pull_request?: SubFeatureConfig;
+//   ai_model?: string;
+//   webhook_url?: string;
+//   events?: string[];
+//   max_length?: number;
+// }
+
+// export interface BotConfig {
+//   enabled: boolean;
+//   welcome_comment: FeatureConfig;
+//   auto_label: FeatureConfig;
+//   auto_assign: FeatureConfig;
+//   discord_notifications: FeatureConfig;
+//   pr_summary: FeatureConfig;
+//   scan: FeatureConfig;
+// }
+
+// export interface ConfigType {
+//   enabled: boolean;
+
+//   welcome_comment: {
+//     enabled: boolean;
+//     issue: { enabled: boolean; message?: string };
+//     pull_request: { enabled: boolean; message?: string };
+//   };
+
+//   auto_label: {
+//     enabled: boolean;
+//     ai_model?: "gpt4omin" | string; // Default option "grok"
+//     issue: { enabled: boolean; labels?: string[] };
+//     pull_request: { enabled: boolean; labels?: string[] };
+//   };
+
+//   auto_assign: { enabled: boolean };
+
+//   discord_notifications: {
+//     enabled: boolean;
+//     webhook_url: string;
+//     events: string[];
+//   };
+
+//   pr_summary: { enabled: boolean; ai_model: string; max_length: number };
+
+//   scan: {
+//     enabled: boolean;
+//     issue: { enabled: boolean; prompt: string };
+//     pull_request: { enabled: boolean; prompt: string };
+//   };
+// }

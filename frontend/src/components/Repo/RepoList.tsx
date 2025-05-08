@@ -1,7 +1,7 @@
 // components/RepoList.tsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Repository } from "../../types";
+import { Repository, TempRepository } from "../../types";
 import RepoItem from "./RepoItem";
 
 type Props = {
@@ -11,12 +11,16 @@ type Props = {
 const RepoList: React.FC<Props> = ({ repositoriesListResponse }) => {
   const navigate = useNavigate();
   const [isCheckedMode, setIsCheckedMode] = React.useState(false);
-  const [selectedRepos, setSelectedRepos] = React.useState<string[]>([]);
-  const handleCheck = (repoId: string) => {
-    if (selectedRepos.includes(repoId)) {
-      setSelectedRepos(selectedRepos.filter((id) => id !== repoId));
+  const [selectedRepos, setSelectedRepos] = React.useState<TempRepository[]>(
+    [],
+  );
+  const handleCheck = (repoParam: TempRepository) => {
+    if (selectedRepos.some((repo) => repo.id === repo.id)) {
+      setSelectedRepos(
+        selectedRepos.filter((repo) => repo.id !== repoParam.id),
+      );
     } else {
-      setSelectedRepos([...selectedRepos, repoId]);
+      setSelectedRepos([...selectedRepos, repoParam]);
     }
   };
   return (
@@ -25,7 +29,7 @@ const RepoList: React.FC<Props> = ({ repositoriesListResponse }) => {
         <h2 className="mb-4 text-2xl font-bold">Repositories</h2>
         <div className="flex items-end items-center justify-between gap-4 text-gray-500">
           {isCheckedMode && (
-            <h2>{selectedRepos?.length} Repositories are selected</h2>
+            <h2>{selectedRepos?.length} repositories are selected</h2>
           )}
 
           <button
@@ -59,7 +63,7 @@ const RepoList: React.FC<Props> = ({ repositoriesListResponse }) => {
         {repositoriesListResponse?.map((repo) => (
           <RepoItem
             isCheckedMode={isCheckedMode}
-            checked={selectedRepos.includes(repo.id.toString())}
+            checked={selectedRepos.some((item) => item.id === repo.id)}
             repo={repo}
             key={repo.id}
             handleCheck={handleCheck}

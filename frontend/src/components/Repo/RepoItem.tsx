@@ -1,11 +1,11 @@
 import React from "react";
-import { Repository } from "../../types";
+import { Repository, TempRepository } from "../../types";
 
 interface RepoItemProps {
   repo: Repository;
   isCheckedMode: boolean;
   checked: boolean;
-  handleCheck: (repoId: string) => void;
+  handleCheck: (repoParem: TempRepository) => void;
 }
 const RepoItem: React.FC<RepoItemProps> = ({
   repo,
@@ -49,7 +49,11 @@ const RepoItem: React.FC<RepoItemProps> = ({
               className="mr-4 h-4"
               checked={checked}
               onChange={() => {
-                handleCheck(repo.id.toString());
+                handleCheck({
+                  id: repo.id,
+                  name: repo.name,
+                  owner: repo.owner,
+                });
               }}
             />
           </label>

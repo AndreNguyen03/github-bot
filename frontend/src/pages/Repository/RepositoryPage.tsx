@@ -21,6 +21,7 @@ const RepositoryPage = () => {
         setLoading(true);
         const repos = await handleAPIGetRepositories(accessToken);
         if (!repos) return;
+        console.log(repos);
         if (!Array.isArray(repos)) {
           console.error("Invalid repository data received");
           return;

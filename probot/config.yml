@@ -9,10 +9,10 @@ welcome_comment:
   enabled: true # Bật/tắt tính năng
   issue:
     enabled: true # Bật/tắt tính năng cho Issues
-    message: "Welcome to our repository! Please check the guidelines." # Nội dung bình luận chào mừng
+    message: Welcome to our repository! Please check the guidelines. # Nội dung bình luận chào mừng
   pull_request:
     enabled: true # Bật/tắt tính năng cho Pull Requests
-    message: "Welcome to our repository! Please check the guidelines." # Nội dung bình luận chào mừng
+    message: Welcome to our repository! Please check the guidelines." # Nội dung bình luận chào mừng
 
 # Tính năng AI Auto Label cho Issues và PR
 auto_label:

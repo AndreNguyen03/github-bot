@@ -2,10 +2,7 @@ const passport = require("passport");
 
 function api(app) {
   // 👉 Route GitHub login
-  app.get(
-    "/auth/github",
-    passport.authenticate("github", { scope: ["user:email"] })
-  );
+  app.get("/auth/github", passport.authenticate("github", { scope: ["repo"] }));
 
   // 👉 Callback từ GitHub
   app.get(

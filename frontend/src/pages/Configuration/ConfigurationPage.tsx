@@ -1,10 +1,79 @@
-import React from "react";
+import React, { useReducer, useState } from "react";
 import { useLocation } from "react-router-dom";
-import CheckBoxLabelInput from "../../components/utils/CheckBoxLabelInput";
+import { defaultUIConfig } from "../../components/utils/DefaultStateConfig";
+import { PushYamlParams, TempRepository, UIConfigState } from "../../types";
+import { mapUIToBotConfig } from "../../components/utils/MapUIToBotConfig";
+import yaml from "js-yaml";
+import apiPushYamlToRepo from "../../api";
+
+type UIConfigAction =
+  | { type: "SET_BOOLEAN"; key: keyof UIConfigState; value: boolean }
+  | { type: "SET_STRING"; key: keyof UIConfigState; value: string }
+  | { type: "RESET" };
+function uiConfigReducer(
+  state: UIConfigState,
+  action: UIConfigAction,
+): UIConfigState {
+  switch (action.type) {
+    case "SET_BOOLEAN":
+      return { ...state, [action.key]: action.value };
+    case "SET_STRING":
+      return { ...state, [action.key]: action.value };
+    case "RESET":
+      return defaultUIConfig;
+    default:
+      return state;
+  }
+}
+
+const handlePushYmlFileToARepositoy = async (
+  repos: TempRepository,
+  yamlResults: string,
+  accessToken: string,
+) => {
+  const params: PushYamlParams = {
+    accessToken: accessToken,
+    repoOwnerName: repos.owner.login,
+    repoName: repos.name,
+    branch: "main",
+    filePath: ".githubb/bot-config.yml",
+    yamlContent: yamlResults,
+  };
+
+  await apiPushYamlToRepo(params);
+};
 const ConfigurationPage = () => {
+  const [state, dispatch] = useReducer(uiConfigReducer, defaultUIConfig);
   const location = useLocation();
-  const selectedRepos = location.state;
-  console.log("Selected Repositories:", selectedRepos);
+  const [selectedRepos] = useState(location.state as TempRepository[]);
+  //console.log("Selected Repositories:", selectedRepos);
+  const handleSave = () => {
+    const isStateValid = () => {
+      if (
+        (state.welcomeCommentIssueEnabled &&
+          !state.welcomeCommentIssueMessage) ||
+        (state.welcomeCommentPullRequestEnabled &&
+          !state.welcomeCommentPullRequestMessage)
+      ) {
+        alert("Please fill in all required fields.");
+        return false;
+      }
+      return true;
+    };
+
+    if (!isStateValid()) {
+      return;
+    }
+    const results = mapUIToBotConfig(state);
+    const yamlResults = yaml.dump(results);
+    //Gọi hàm bắt file lên github
+    if (localStorage.getItem("accessToken")) {
+      const accessToken = localStorage.getItem("accessToken")!;
+      for (const repo of selectedRepos) {
+        handlePushYmlFileToARepositoy(repo, yamlResults, accessToken);
+      }
+    }
+  };
   return (
     <div className="mb-4 flex h-full w-full flex-col justify-between">
       <div className="mb-4 flex justify-between">
@@ -15,43 +84,133 @@ const ConfigurationPage = () => {
         <div className="mb-2 items-center">
           <h2 className="mb-4 text-xl font-bold">Label</h2>
           <div>
-            <input type="checkbox" id="idCheckboxIssue" className="mr-2" />
-            <label htmlFor="idCheckboxIssue" className="mr-4">
+            <input
+              type="checkbox"
+              id="idCheckboxLabelIssue"
+              checked={state.autoLabelIssue}
+              className="mr-2"
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_BOOLEAN",
+                  key: "autoLabelIssue",
+                  value: e.target.checked,
+                })
+              }
+            />
+            <label htmlFor="idCheckboxLabelIssue" className="mr-4">
               Issue
             </label>
           </div>
         </div>
         <div className="mb-2 items-center">
           <div>
-            <input type="checkbox" id="labelCheckboxPR" className="mr-2" />
+            <input
+              type="checkbox"
+              id="labelCheckboxPR"
+              checked={state.autoLabelPullRequest}
+              className="mr-2"
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_BOOLEAN",
+                  key: "autoLabelPullRequest",
+                  value: e.target.checked,
+                })
+              }
+            />
             <label htmlFor="labelCheckboxPR" className="mr-4">
               Pull Request
             </label>
           </div>
         </div>
-        <h2 className="mb-4 text-xl font-bold">Assign</h2>
+
         <div className="mb-2 flex items-center">
-          <input type="checkbox" id="assignCheckbox1" className="mr-2" />
-          <label htmlFor="assignCheckbox1" className="mr-4">
-            Leader
+          <label htmlFor="assignCheckbox" className="mb-4 text-xl font-bold">
+            Assign
           </label>
-        </div>
-        <div className="mb-2 flex items-center">
-          <input type="checkbox" id="assignCheckbox2" className="mr-2" />
-          <label htmlFor="assignCheckbox2" className="mr-4">
-            The best contributor
-          </label>
+          <input
+            type="checkbox"
+            id="assignCheckbox"
+            className="mr-2"
+            checked={state.assign}
+            onChange={(e) =>
+              dispatch({
+                type: "SET_BOOLEAN",
+                key: "assign",
+                value: e.target.checked,
+              })
+            }
+          />
         </div>
         <div className="mb-2 items-center">
           <h2 className="mb-4 text-xl font-bold">Message Start</h2>
-          <CheckBoxLabelInput label="Issue" placeholder="Enter start message" />
+          <div>
+            <div>
+              <input
+                type="checkbox"
+                id={"MessageIssueCheckBox"}
+                checked={state.welcomeCommentIssueEnabled}
+                className="mr-2"
+                onChange={(e) =>
+                  dispatch({
+                    type: "SET_BOOLEAN",
+                    key: "welcomeCommentIssueEnabled",
+                    value: e.target.checked,
+                  })
+                }
+              />
+              <label htmlFor="MessageIssueCheckBox" className="mr-4">
+                Issue
+              </label>
+            </div>
+            <input
+              type="text"
+              placeholder="Enter message start"
+              className="w-full border p-3 py-2"
+              value={state.welcomeCommentIssueMessage}
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_STRING",
+                  key: "welcomeCommentIssueMessage",
+                  value: e.target.value,
+                })
+              }
+            />
+          </div>
+          <div>
+            <div>
+              <input
+                type="checkbox"
+                id={"MessagePullRequestCheckBox"}
+                checked={state.welcomeCommentPullRequestEnabled}
+                className="mr-2"
+                onChange={(e) =>
+                  dispatch({
+                    type: "SET_BOOLEAN",
+                    key: "welcomeCommentPullRequestEnabled",
+                    value: e.target.checked,
+                  })
+                }
+              />
+              <label htmlFor="MessagePullRequestCheckBox" className="mr-4">
+                PullRequest
+              </label>
+            </div>
+            <input
+              type="text"
+              placeholder="Enter message start"
+              className="w-full border p-3 py-2"
+              value={state.welcomeCommentPullRequestMessage}
+              onChange={(e) =>
+                dispatch({
+                  type: "SET_STRING",
+                  key: "welcomeCommentPullRequestMessage",
+                  value: e.target.value,
+                })
+              }
+            />
+          </div>
         </div>
-        <div className="mb-2 items-center">
-          <CheckBoxLabelInput
-            label="Pull Request"
-            placeholder="Enter start message"
-          />
-        </div>
+
         <div className="mb-2 flex items-center">
           <h2 className="mb-4 text-xl font-bold">
             Changed Summary In Pullrequest
@@ -65,7 +224,14 @@ const ConfigurationPage = () => {
         <input type="text" placeholder="Enter label" className="border p-1" />
         <div className="flex items-center justify-center space-x-5">
           <button className="bg-gray-400 p-1 text-gray-700">Cancel</button>
-          <button className="bg-green-600 p-1 text-white">Save</button>
+          <button
+            className="bg-green-600 p-1 text-white"
+            onClick={() => {
+              handleSave();
+            }}
+          >
+            Save
+          </button>
         </div>
       </div>
     </div>
