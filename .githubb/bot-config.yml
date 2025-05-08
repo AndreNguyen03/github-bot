@@ -1,0 +1,44 @@
+enabled: true
+welcome_comment:
+  enabled: false
+  issue:
+    enabled: false
+    message: ''
+  pull_request:
+    enabled: false
+    message: ''
+auto_label:
+  enabled: true
+  ai_model: grok
+  issue:
+    enabled: true
+    labels:
+      - bug
+      - feature-request
+      - question
+      - urgent
+  pull_request:
+    enabled: true
+    labels:
+      - fix
+      - enhancement
+      - documentation
+      - needs-review
+auto_assign:
+  enabled: false
+discord_notifications:
+  enabled: true
+  webhook_url: https://discord.com/api/webhooks/...
+  events: []
+pr_summary:
+  enabled: false
+  ai_model: grok
+  max_length: 200
+scan:
+  enabled: false
+  issue:
+    enabled: false
+    prompt: ''
+  pull_request:
+    enabled: false
+    prompt: ''
