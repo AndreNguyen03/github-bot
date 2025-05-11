@@ -1,7 +1,7 @@
-const passport = require("passport");
-const GitHubStrategy = require("passport-github2").Strategy;
-require("dotenv").config();
-
+import passport from "passport";
+import { Strategy as GitHubStrategy } from "passport-github2";
+import dotenv from "dotenv";
+dotenv.config();
 passport.serializeUser((user, done) => {
   done(null, user);
 });

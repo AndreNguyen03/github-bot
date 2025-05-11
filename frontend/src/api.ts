@@ -1,9 +1,11 @@
 import { Octokit } from "@octokit/rest";
 import { RequestError } from "@octokit/request-error";
+
 import {
   PushYamlParams,
   // PushYamlParams,
   RepositoryListResponse,
+  RepositoryPageReponse,
   User,
 } from "./types";
 
@@ -32,37 +34,105 @@ export async function logOut(): Promise<string> {
   return data;
 }
 
-export async function handleAPIGetRepositories(accessToken: string) {
+// export async function handleAPIGetBotRepositoriesConfig(accessToken: string) {
+//   try {
+//     if (!accessToken) return;
+//     const userOctokit = new Octokit({
+//       auth: accessToken,
+//     });
+
+//     // 1. Lấy danh sách repo mà GitHub App (bot) có quyền
+//     const botAccessibleReposRes: RepositoryListResponse | undefined =
+//       await handleGetAccessibleRepositoriesByInstallation();
+//     const botAccessibleReposSet = new Set(
+//       botAccessibleReposRes?.repositories.map((repo) => repo.full_name),
+//     );
+//     console.log(botAccessibleReposSet);
+
+//     // 2. Lấy danh sách repo của user
+//     const res = await userOctokit.rest.repos.listForAuthenticatedUser({
+//       affiliation: "owner",
+//       sort: "created",
+//       direction: "desc",
+//     });
+//     if (res.status !== 200) {
+//       throw new Error("Failed to fetch repositories");
+//     }
+//     const userRepos = res.data;
+
+//     // 3. Duyệt từng repo để check:
+//     // - Bot có quyền?
+//     // - Có file bot-config.yml không?
+//     const results = await Promise.all(
+//       userRepos.map(async (repo) =>
+//         limit(async () => {
+//           const fullName = `${repo.owner.login}/${repo.name}`;
+//           const hasAccessiblePermissionBot =
+//             botAccessibleReposSet.has(fullName);
+//           console.log(hasAccessiblePermissionBot, fullName);
+
+//           let hasBotConfig = false;
+//           try {
+//             await userOctokit.rest.repos.getContent({
+//               owner: repo.owner.login,
+//               repo: repo.name,
+//               path: ".github/bot-config.yml",
+//             });
+//             console.log("555");
+//             hasBotConfig = true;
+//           } catch (err: unknown) {
+//             if (err instanceof RequestError && err.status === 404) {
+//               hasBotConfig = false;
+//             } else {
+//               throw err;
+//             }
+//           }
+
+//           return {
+//             ...repo,
+//             hasBotConfig,
+//             hasAccessiblePermissionBot,
+//           };
+//         }),
+//       ),
+//     );
+//     console.log(JSON.stringify(results));
+//     return results as unknown as Repository;
+//   } catch (err: unknown) {
+//     if (err instanceof RequestError) {
+//       switch (err.status) {
+//         case 401:
+//           // token hết hạn hoặc không hợp lệ
+//           throw new Error(
+//             "⚠️ Unauthorized: Phiên đăng nhập đã hết hạn hoặc token không hợp lệ.",
+//           );
+//         case 403:
+//           throw new Error(
+//             "🚫 Forbidden: Bạn không có quyền truy cập repositories này.",
+//           );
+//         default:
+//           throw new Error(`GitHub API error ${err.status}: ${err.message}`);
+//       }
+//     }
+//   }
+// }
+
+export async function handleAPIGetRepositories(
+  accessToken: string,
+  perPage: number = 100,
+  pageNumber: number = 1,
+): Promise<RepositoryPageReponse | undefined> {
+  const url = `http://localhost:3001/api/user/repositories?accessToken=${accessToken}&perPage=${perPage}&page=${pageNumber}`;
   try {
-    if (!accessToken) return;
-    const octokit = new Octokit({
-      auth: accessToken,
-    });
-    const res = await octokit.rest.repos.listForAuthenticatedUser();
-    if (res.status !== 200) {
-      throw new Error("Failed to fetch repositories");
-    }
-    return res.data;
-  } catch (err: unknown) {
-    if (err instanceof RequestError) {
-      switch (err.status) {
-        case 401:
-          // token hết hạn hoặc không hợp lệ
-          throw new Error(
-            "⚠️ Unauthorized: Phiên đăng nhập đã hết hạn hoặc token không hợp lệ.",
-          );
-        case 403:
-          throw new Error(
-            "🚫 Forbidden: Bạn không có quyền truy cập repositories này.",
-          );
-        default:
-          throw new Error(`GitHub API error ${err.status}: ${err.message}`);
-      }
-    }
+    const res = await fetch(url);
+    const data = await res.json();
+    return data as RepositoryPageReponse;
+  } catch (err) {
+    console.error("Error:", err);
+    return undefined;
   }
 }
-
-export async function handleAPIGetRepositoriesByInstallationId(): Promise<
+export async function handleGetAccessibleRepositoriesByInstallation(): Promise<
   RepositoryListResponse | undefined
 > {
   try {
@@ -96,92 +166,6 @@ export async function handleAPIGetRepositoriesByInstallationId(): Promise<
     }
   }
 }
-
-// export async function d({
-//   accessToken,
-//   repoOwnerName,
-//   repoName,
-//   branch,
-//   filePath,
-//   yamlContent,
-// }: PushYamlPasrams) {
-//   console.log(
-//     "accessToken,repoUserName,repoName,yamlContent,path:",
-//     accessToken,
-//     repoUserName,
-//     repoName,
-//     yamlContent,
-//     path,
-//   );
-
-//   const octokit = new Octokit({
-//     auth: accessToken,
-//   });
-
-//   const contentBase64 = btoa(unescape(encodeURIComponent(yamlContent)));
-
-//   try {
-//     const responseexistRepo = await octokit.rest.repos.get({
-//       owner: repoOwnerName,
-//       repo: repoName,
-//     });
-//     console.log("OAuth scopes:", responseexistRepo.headers["x-oauth-scopes"]);
-//     console.log("Repository tồn tại:", responseexistRepo.data);
-
-//     // Kiểm tra sự tồn tại của thư mục .github
-//     try {
-//       const fileExistsResponse = await octokit.rest.repos.getContent({
-//         owner: repoOwnerName,
-//         repo: repoName,
-//         path: ".github", // Kiểm tra thư mục .github
-//       });
-
-//       console.log("Thư mục .github đã tồn tại:", fileExistsResponse.data);
-//     } catch (error: unknown) {
-//       if (error instanceof RequestError && error.status === 404) {
-//         // Nếu thư mục .github chưa tồn tại, chúng ta sẽ tạo thư mục này
-//         console.log("Thư mục .github chưa tồn tại, tạo mới thư mục...");
-//         await octokit.rest.repos.createOrUpdateFileContents({
-//           owner: repoOwnerName,
-//           repo: repoName,
-//           path: ".github/.empty", // Tạo một file trống trong thư mục .github để tạo thư mục
-//           message: "Tạo thư mục .github",
-//           content: "", // File trống
-//           branch: "main",
-//         });
-//       }
-//     }
-
-//     // Kiểm tra quyền truy cập
-//     const permissions = responseexistRepo.data.permissions;
-//     if (permissions?.push) {
-//       console.log("Access token có quyền ghi vào repository.");
-
-//       try {
-//         // Tạo hoặc cập nhật file bot-config.yml
-//         const response = await octokit.rest.repos.createOrUpdateFileContents({
-//           owner: repoOwnerName,
-//           repo: repoName,
-//           path: path, // Đường dẫn tới file
-//           message: "Tạo hoặc cập nhật file config.yml",
-//           content: contentBase64,
-//           branch: "main",
-//         });
-
-//         console.log(
-//           "File đã được tạo hoặc cập nhật thành công:",
-//           response.data,
-//         );
-//       } catch (error: unknown) {
-//         console.error("Lỗi khi tạo hoặc cập nhật file:", error);
-//       }
-//     } else {
-//       console.log("Access token không có quyền ghi vào repository.");
-//     }
-//   } catch (error: unknown) {
-//     console.error("Không thể kiểm tra quyền truy cập:", error);
-//   }
-// }
 
 export default async function apiPushYamlToRepo({
   accessToken,
@@ -234,8 +218,9 @@ export default async function apiPushYamlToRepo({
       branch: branch,
       sha,
     });
-
-    return result;
+    const status = result.status;
+    if (status === 200 || status === 201) return true;
+    else return false;
   } catch (err: unknown) {
     if (err instanceof RequestError) {
       switch (err.status) {

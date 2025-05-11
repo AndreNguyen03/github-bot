@@ -35,13 +35,23 @@ const Header: React.FC = () => {
   return (
     <header className="fixed left-0 top-0 z-50 w-full bg-blue-600 text-white shadow-md">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <div className="flex items-center space-x-2">
-          <img
-            src={user ? user.avatar : "/src/assets/img/userimg.png"}
-            alt="Logo"
-            className="h-8 w-8 rounded-full bg-gray-200"
-          />
-          <h3>{user?.username}</h3>
+        <div className="flex space-x-2">
+          <div className="flex items-center space-x-2">
+            <img
+              src={user ? user.avatar : "/src/assets/img/userimg.png"}
+              alt="Logo"
+              className="h-8 w-8 rounded-full bg-gray-200"
+            />
+            <h3>{user?.username}</h3>
+          </div>
+          <div className="flex items-center space-x-2">
+            <img
+              src={user ? user.avatar : "/src/assets/img/userimg.png"}
+              alt="Logo"
+              className="h-8 w-8 rounded-full bg-gray-200"
+            />
+            <h3>{user?.username}</h3>
+          </div>
         </div>
         <h1 className="text-xl font-bold">GitHub Bot management</h1>
         <nav>

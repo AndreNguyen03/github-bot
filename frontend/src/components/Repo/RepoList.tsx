@@ -1,67 +1,31 @@
 // components/RepoList.tsx
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { Repository, TempRepository } from "../../types";
 import RepoItem from "./RepoItem";
+import defineColorCard from "../utils/DefineColorCard";
 
 type Props = {
   repositoriesListResponse: Repository[] | undefined;
+  isCheckedMode: boolean;
+  handleCheck: (repo: TempRepository) => void;
+  selectedRepos: TempRepository[];
 };
 
-const RepoList: React.FC<Props> = ({ repositoriesListResponse }) => {
-  const navigate = useNavigate();
-  const [isCheckedMode, setIsCheckedMode] = React.useState(false);
-  const [selectedRepos, setSelectedRepos] = React.useState<TempRepository[]>(
-    [],
-  );
-  const handleCheck = (repoParam: TempRepository) => {
-    if (selectedRepos.some((repo) => repo.id === repo.id)) {
-      setSelectedRepos(
-        selectedRepos.filter((repo) => repo.id !== repoParam.id),
-      );
-    } else {
-      setSelectedRepos([...selectedRepos, repoParam]);
-    }
-  };
+const RepoList: React.FC<Props> = ({
+  repositoriesListResponse,
+  isCheckedMode,
+  handleCheck,
+  selectedRepos,
+}) => {
   return (
-    <div className="p-4">
-      <div className="mb-4 inline-flex w-full items-center justify-between">
-        <h2 className="mb-4 text-2xl font-bold">Repositories</h2>
-        <div className="flex items-end items-center justify-between gap-4 text-gray-500">
-          {isCheckedMode && (
-            <h2>{selectedRepos?.length} repositories are selected</h2>
-          )}
-
-          <button
-            className="mb-4 rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-            onClick={() => {
-              setIsCheckedMode(!isCheckedMode);
-              setSelectedRepos([]);
-            }}
-          >
-            {isCheckedMode ? "Deselect" : "Select"}
-          </button>
-          {isCheckedMode && (
-            <button
-              className={
-                "mb-4 rounded px-4 py-2" +
-                (selectedRepos.length > 0
-                  ? " bg-green-400 text-white hover:bg-green-500"
-                  : " bg-gray-400 text-gray-200")
-              }
-              onClick={() =>
-                navigate("/configuration", { state: selectedRepos })
-              }
-              disabled={selectedRepos.length === 0}
-            >
-              Go to Config
-            </button>
-          )}
-        </div>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
+    <div>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
         {repositoriesListResponse?.map((repo) => (
           <RepoItem
+            color={defineColorCard(
+              repo.hasBotConfig,
+              repo.hasAccessiblePermissionBot,
+            )}
             isCheckedMode={isCheckedMode}
             checked={selectedRepos.some((item) => item.id === repo.id)}
             repo={repo}

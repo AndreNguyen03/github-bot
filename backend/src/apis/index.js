@@ -1,6 +1,7 @@
-const passport = require("passport");
-
-function api(app) {
+import passport from "passport";
+import installationEndpoint from "./installation.js";
+import repositoryControler from "../controller/RepositoryController.js";
+export default function api(app) {
   // 👉 Route GitHub login
   app.get("/auth/github", passport.authenticate("github", { scope: ["repo"] }));
 
@@ -13,71 +14,8 @@ function api(app) {
     }
   );
 
-  // app.get("/api/installations", async (req, res) => {
-  //   try {
-  //     const { Octokit } = await import("@octokit/rest");
-  //     const { createAppAuth } = await import("@octokit/auth-app");
-  //     const octokit = new Octokit({
-  //       authStrategy: createAppAuth,
-  //       auth: {
-  //         appId: process.env.APP_ID,
-  //         privateKey: process.env.PRIVATE_KEY.replace(/\\n/g, "\n"),
-  //       },
-  //     });
-  //     const response = await octokit.request("GET /app/installations");
-  //     res.json(response.data[0].id);
-  //   } catch (err) {
-  //     console.error("Error fetching installations", err);
-  //     res.status(500).json({ error: err.message });
-  //   }
-  // });
-
-  app.get("/api/installations/repositories", async (req, res) => {
-    try {
-      const { Octokit } = await import("@octokit/rest");
-      const { createAppAuth } = await import("@octokit/auth-app");
-
-      const octokit = new Octokit({
-        authStrategy: createAppAuth,
-        auth: {
-          appId: process.env.APP_ID,
-          privateKey: process.env.PRIVATE_KEY.replace(/\\n/g, "\n"),
-        },
-      });
-
-      // Installation ID được cung cấp (hoặc lấy từ query parameter)
-      const responseInstallationList = await octokit.request(
-        "GET /app/installations"
-      );
-      //lấy installationId từ response đầu tiên là install trên áy hiện tại của người này
-      const installationId = responseInstallationList.data[0].id;
-
-      // Lấy token truy cập cho installation này
-      const authResponse = await octokit.request(
-        `POST /app/installations/${installationId}/access_tokens`
-      );
-      const installationAccessToken = authResponse.data.token; // Token truy cập của installation
-      console.log("Token truy cập của installation:", installationAccessToken);
-      // Tạo một Octokit mới với token của installation
-      const octokitWithAuth = new Octokit({
-        auth: installationAccessToken,
-      });
-
-      // Lấy danh sách repositories của installation
-      const response = await octokitWithAuth.request(
-        `GET /installation/repositories`,
-        {
-          installation_id: installationId,
-        }
-      );
-
-      // Trả về danh sách repositories
-      res.json(response.data);
-    } catch (err) {
-      console.error("Error fetching repositories", err);
-      res.status(500).json({ error: err.message });
-    }
-  });
+  //xem bot có thể handle những repository nào
+  app.get("/api/installations", installationEndpoint);
 
   // 👉 API trả user hiện tại
   app.get("/api/user", (req, res) => {
@@ -104,6 +42,5 @@ function api(app) {
       res.json({ message: "Đã logout" });
     });
   });
+  app.get("/api/user/repositories", repositoryControler.getRepositories);
 }
-
-module.exports = api;

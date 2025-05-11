@@ -52,12 +52,16 @@ export interface Repository {
   license: License | null; // Thêm license từ API
   permissions?: Permissions; // Thêm permissions từ API
   anonymous_access_enabled?: boolean; // Thêm anonymous_access_enabled từ API
+  hasBotConfig: false;
+  hasAccessiblePermissionBot: false;
 }
 
 export interface TempRepository {
   id: number;
   name: string;
+  html_url: string;
   owner: Owner;
+  created_at: string | null;
 }
 
 export interface PushYamlParams {
@@ -118,7 +122,6 @@ export interface UIConfigState {
 
   // DISCORD
   discordEnabled: boolean;
-  discordLabel: string;
 }
 
 export interface BotConfig {
@@ -178,62 +181,39 @@ export interface BotConfig {
   };
 }
 
-// export interface SubFeatureConfig {
-//   enabled: boolean;
-//   message?: string;
-//   labels?: string[];
-//   prompt?: string;
-// }
+export interface Notification {
+  id: number;
+  message: string;
+  type?: "success" | "error" | "info";
+}
 
-// export interface FeatureConfig {
-//   enabled: boolean;
-//   issue?: SubFeatureConfig;
-//   pull_request?: SubFeatureConfig;
-//   ai_model?: string;
-//   webhook_url?: string;
-//   events?: string[];
-//   max_length?: number;
-// }
+export interface NotificationContextType {
+  notify: (message: string, type?: Notification["type"]) => void;
+}
 
-// export interface BotConfig {
-//   enabled: boolean;
-//   welcome_comment: FeatureConfig;
-//   auto_label: FeatureConfig;
-//   auto_assign: FeatureConfig;
-//   discord_notifications: FeatureConfig;
-//   pr_summary: FeatureConfig;
-//   scan: FeatureConfig;
-// }
+export interface modeRepository {
+  type: string;
+  api: string;
+}
 
-// export interface ConfigType {
-//   enabled: boolean;
+export interface BotInfo {
+  app_id: number;
+  app_slug: string;
+  html_url: string;
+}
 
-//   welcome_comment: {
-//     enabled: boolean;
-//     issue: { enabled: boolean; message?: string };
-//     pull_request: { enabled: boolean; message?: string };
-//   };
+export interface RepositoryContextType {
+  currentRepos: Repository[];
+  handleCheck: (repoPrams: TempRepository) => void;
+  isCheckMode: boolean;
+}
 
-//   auto_label: {
-//     enabled: boolean;
-//     ai_model?: "gpt4omin" | string; // Default option "grok"
-//     issue: { enabled: boolean; labels?: string[] };
-//     pull_request: { enabled: boolean; labels?: string[] };
-//   };
-
-//   auto_assign: { enabled: boolean };
-
-//   discord_notifications: {
-//     enabled: boolean;
-//     webhook_url: string;
-//     events: string[];
-//   };
-
-//   pr_summary: { enabled: boolean; ai_model: string; max_length: number };
-
-//   scan: {
-//     enabled: boolean;
-//     issue: { enabled: boolean; prompt: string };
-//     pull_request: { enabled: boolean; prompt: string };
-//   };
-// }
+interface Pagination {
+  currentPage: number;
+  perPage: number;
+  totalPages: number;
+}
+export interface RepositoryPageReponse {
+  repos: Repository[];
+  pagination: Pagination;
+}
