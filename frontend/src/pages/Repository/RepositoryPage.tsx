@@ -17,7 +17,7 @@ const RepositoryPage = () => {
   //Phân trang
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
-  const repositoriesPerPage = 12;
+  const repositoriesPerPage = 21;
   const navigate = useNavigate();
 
   const fetchRepositories = async (page: number) => {

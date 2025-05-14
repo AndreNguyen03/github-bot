@@ -124,7 +124,7 @@ export interface UIConfigState {
   discordEnabled: boolean;
 }
 
-export interface BotConfig {
+export interface ConfigOptions {
   enabled: boolean;
 
   welcome_comment: {
@@ -196,12 +196,6 @@ export interface modeRepository {
   api: string;
 }
 
-export interface BotInfo {
-  app_id: number;
-  app_slug: string;
-  html_url: string;
-}
-
 export interface RepositoryContextType {
   currentRepos: Repository[];
   handleCheck: (repoPrams: TempRepository) => void;
@@ -216,4 +210,33 @@ interface Pagination {
 export interface RepositoryPageReponse {
   repos: Repository[];
   pagination: Pagination;
+}
+
+export interface BotInfo {
+  user: User;
+  githubAppId: String; // ID GitHub App
+  githubAppName: String;
+  githubAppSlug: String;
+  privateKey: String;
+  webhookSecret: String;
+  installationId: Number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BotConfig {
+  _id: string;
+  botAppId: string; // Tham chiếu đến BotApp
+  configName: String; // Tên bản cấu hình
+  configOptions: ConfigOptions; // Nội dung rule/config cụ thể
+  createdAt: Date;
+  updatedAt: Date;
+  enabled: boolean;
+}
+
+interface ConfigSummary {
+  configName: string; // Tên config (theo timestamp hoặc người dùng đặt)
+  updatedAt: Date;
+  enabled: boolean;
+  summaryFeatures: string[]; // Các tính năng đang bật như ["auto_label", "discord_notifications"]
 }

@@ -3,6 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { getCurrentUser, logOut } from "../../api";
 import { User } from "../../types";
 
+const endpointMap: Record<string, string> = {
+  repos: "/repository",
+  bot: "/bot",
+};
+
 const Header: React.FC = () => {
   const [user, setUser] = useState<User | null>();
   const navigate = useNavigate();
@@ -29,8 +34,8 @@ const Header: React.FC = () => {
     alert(message);
     fetchUser();
   };
-  const handleGotoListRepos = () => {
-    navigate("../repositories");
+  const handleGotoListRepos = (endPoint: string) => {
+    navigate(endpointMap[endPoint]);
   };
   return (
     <header className="fixed left-0 top-0 z-50 w-full bg-blue-600 text-white shadow-md">
@@ -57,8 +62,19 @@ const Header: React.FC = () => {
         <nav>
           <ul className="flex space-x-4">
             <li>
-              <a className="hover:underline" onClick={handleGotoListRepos}>
+              <a
+                className="hover:underline"
+                onClick={() => handleGotoListRepos("repos")}
+              >
                 Repository
+              </a>
+            </li>
+            <li>
+              <a
+                className="hover:underline"
+                onClick={() => handleGotoListRepos("bot")}
+              >
+                Bot
               </a>
             </li>
             <li>
@@ -71,6 +87,7 @@ const Header: React.FC = () => {
                 About
               </a>
             </li>
+
             <li>
               <a className="hover:underline" onClick={handleLogOut}>
                 Logout
