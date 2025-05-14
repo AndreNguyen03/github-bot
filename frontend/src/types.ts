@@ -52,6 +52,26 @@ export interface Repository {
   license: License | null; // Thêm license từ API
   permissions?: Permissions; // Thêm permissions từ API
   anonymous_access_enabled?: boolean; // Thêm anonymous_access_enabled từ API
+  hasBotConfig: false;
+  hasAccessiblePermissionBot: false;
+}
+
+export interface TempRepository {
+  id: number;
+  name: string;
+  html_url: string;
+  owner: Owner;
+  created_at: string | null;
+}
+
+export interface PushYamlParams {
+  accessToken: string;
+  repoOwnerName: string;
+  repoName: string;
+  branch: string;
+  filePath: string;
+  yamlContent: string;
+  commitMessage?: string;
 }
 
 export interface RepositoryListResponse {
@@ -83,35 +103,58 @@ export interface Installation {
   [key: string]: unknown;
 }
 
-export interface FontendConfig {
-  labelIssue: boolean;
-  labelPR: boolean;
-  assignLeader: boolean;
-  assignBest: boolean;
-  msgIssue: string;
-  msgPR: string;
-  changedSummary: boolean;
-  discord: boolean;
-  customLabel: string;
+export interface UIConfigState {
+  // LABEL - auto_label.issue / pull_request
+  autoLabelIssue: boolean;
+  autoLabelPullRequest: boolean;
+
+  // ASSIGN - không có sẵn trong YAML nên sẽ cần mapping lại
+  assign: boolean;
+
+  // WELCOME MESSAGE
+  welcomeCommentIssueEnabled: boolean;
+  welcomeCommentIssueMessage: string;
+  welcomeCommentPullRequestEnabled: boolean;
+  welcomeCommentPullRequestMessage: string;
+
+  // PR SUMMARY
+  prSummaryEnabled: boolean;
+
+  // DISCORD
+  discordEnabled: boolean;
 }
 
-export interface ConfigState {
+export interface ConfigOptions {
   enabled: boolean;
 
   welcome_comment: {
     enabled: boolean;
-    issue: { enabled: boolean; message: string };
-    pull_request: { enabled: boolean; message: string };
+    issue: {
+      enabled: boolean;
+      message: string;
+    };
+    pull_request: {
+      enabled: boolean;
+      message: string;
+    };
   };
 
   auto_label: {
     enabled: boolean;
-    ai_model: "gpt4omin" | string; // Default option "grok"
-    issue: { enabled: boolean; labels: string[] };
-    pull_request: { enabled: boolean; labels: string[] };
+    ai_model: string;
+    issue: {
+      enabled: boolean;
+      labels: string[];
+    };
+    pull_request: {
+      enabled: boolean;
+      labels: string[];
+    };
   };
 
-  auto_assign: { enabled: boolean };
+  auto_assign: {
+    enabled: boolean;
+  };
 
   discord_notifications: {
     enabled: boolean;
@@ -119,11 +162,81 @@ export interface ConfigState {
     events: string[];
   };
 
-  pr_summary: { enabled: boolean; ai_model: string; max_length: number };
+  pr_summary: {
+    enabled: boolean;
+    ai_model: string;
+    max_length: number;
+  };
 
   scan: {
     enabled: boolean;
-    issue: { enabled: boolean; prompt: string };
-    pull_request: { enabled: boolean; prompt: string };
+    issue: {
+      enabled: boolean;
+      prompt: string;
+    };
+    pull_request: {
+      enabled: boolean;
+      prompt: string;
+    };
   };
+}
+
+export interface Notification {
+  id: number;
+  message: string;
+  type?: "success" | "error" | "info";
+}
+
+export interface NotificationContextType {
+  notify: (message: string, type?: Notification["type"]) => void;
+}
+
+export interface modeRepository {
+  type: string;
+  api: string;
+}
+
+export interface RepositoryContextType {
+  currentRepos: Repository[];
+  handleCheck: (repoPrams: TempRepository) => void;
+  isCheckMode: boolean;
+}
+
+interface Pagination {
+  currentPage: number;
+  perPage: number;
+  totalPages: number;
+}
+export interface RepositoryPageReponse {
+  repos: Repository[];
+  pagination: Pagination;
+}
+
+export interface BotInfo {
+  user: User;
+  githubAppId: String; // ID GitHub App
+  githubAppName: String;
+  githubAppSlug: String;
+  privateKey: String;
+  webhookSecret: String;
+  installationId: Number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface BotConfig {
+  _id: string;
+  botAppId: string; // Tham chiếu đến BotApp
+  configName: String; // Tên bản cấu hình
+  configOptions: ConfigOptions; // Nội dung rule/config cụ thể
+  createdAt: Date;
+  updatedAt: Date;
+  enabled: boolean;
+}
+
+interface ConfigSummary {
+  configName: string; // Tên config (theo timestamp hoặc người dùng đặt)
+  updatedAt: Date;
+  enabled: boolean;
+  summaryFeatures: string[]; // Các tính năng đang bật như ["auto_label", "discord_notifications"]
 }

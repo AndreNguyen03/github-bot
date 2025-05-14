@@ -1,11 +1,9 @@
-const express = require("express");
-const session = require("express-session");
-const api = require("./apis/index");
-const passport = require("passport");
-const cors = require("cors");
-require("dotenv").config();
-require("./auth/github");
-
+import express from "express";
+import session from "express-session";
+import api from "./apis/index.js";
+import passport from "passport";
+import cors from "cors";
+import "./auth/github.js";
 const app = express();
 
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
