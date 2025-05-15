@@ -32,6 +32,10 @@ const Header: React.FC = () => {
   const handleGotoListRepos = () => {
     navigate("../repositories");
   };
+  function handleGotoHistory() {
+    navigate("../histories")
+  }
+
   return (
     <header className="fixed left-0 top-0 z-50 w-full bg-blue-600 text-white shadow-md">
       <div className="container mx-auto flex items-center justify-between px-4 py-3">
@@ -52,7 +56,7 @@ const Header: React.FC = () => {
               </a>
             </li>
             <li>
-              <a href="#about" className="hover:underline">
+              <a className="hover:underline" onClick={handleGotoHistory}>
                 History
               </a>
             </li>

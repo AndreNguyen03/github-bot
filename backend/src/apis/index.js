@@ -1,10 +1,10 @@
 const passport = require("passport");
-
+const configHistoryRoutes = require("../routes/configHistory.routes.js");
 function api(app) {
   // 👉 Route GitHub login
   app.get(
     "/auth/github",
-    passport.authenticate("github", { scope: ["user:email"] })
+    passport.authenticate("github", { scope: ["user:email", "repo"] })
   );
 
   // 👉 Callback từ GitHub
@@ -107,6 +107,8 @@ function api(app) {
       res.json({ message: "Đã logout" });
     });
   });
+
+  app.use("/api/config-history", configHistoryRoutes);
 }
 
 module.exports = api;

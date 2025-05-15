@@ -5,6 +5,7 @@ const passport = require("passport");
 const cors = require("cors");
 require("dotenv").config();
 require("./auth/github");
+const connectDB = require("./db-config/db.config.js");
 
 const app = express();
 
@@ -27,53 +28,55 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// // 👉 Route GitHub login
-// app.get(
-//   "/auth/github",
-//   passport.authenticate("github", { scope: ["user:email"] })
-// );
+// 👉 Route GitHub login
+app.get(
+  "/auth/github",
+  passport.authenticate("github", { scope: ["user:email"] })
+);
 
-// // 👉 Callback từ GitHub
-// app.get(
-//   "/auth/github/callback",
-//   passport.authenticate("github", { failureRedirect: "/" }),
-//   (req, res) => {
-//     res.redirect("http://localhost:5173");
-//   }
-// );
+// 👉 Callback từ GitHub
+app.get(
+  "/auth/github/callback",
+  passport.authenticate("github", { failureRedirect: "/" }),
+  (req, res) => {
+    res.redirect("http://localhost:5173");
+  }
+);
 
-// // 👉 API trả user hiện tại
-// app.get("/api/user", (req, res) => {
-//   if (!req.user) {
-//     return res.json({ message: "Chưa đăng nhập" });
-//   }
-//   res.json(req.user);
-// });
+// 👉 API trả user hiện tại
+app.get("/api/user", (req, res) => {
+  if (!req.user) {
+    return res.json({ message: "Chưa đăng nhập" });
+  }
+  res.json(req.user);
+});
 
-// // 👉 Logout
-// app.post("/auth/logout", (req, res) => {
-//   console.log("Trước khi logout:", req.session);
+// 👉 Logout
+app.post("/auth/logout", (req, res) => {
+  console.log("Trước khi logout:", req.session);
 
-//   // Xóa session
-//   req.session.destroy((err) => {
-//     if (err) {
-//       return res.status(500).json({ message: "Lỗi khi hủy session" });
-//     }
+  // Xóa session
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ message: "Lỗi khi hủy session" });
+    }
 
-//     // Xóa cookie trên client
-//     res.clearCookie("connect.sid", {
-//       path: "/",
-//       secure: false,
-//       httpOnly: true,
-//       maxAge: 1000 * 60 * 30,
-//     });
+    // Xóa cookie trên client
+    res.clearCookie("connect.sid", {
+      path: "/",
+      secure: false,
+      httpOnly: true,
+      maxAge: 1000 * 60 * 30,
+    });
 
-//     res.json({ message: "Đã logout" });
-//   });
-// });
+    res.json({ message: "Đã logout" });
+  });
+});
 
 api(app);
 
-app.listen(3001, () => {
-  console.log("✅ Backend chạy tại http://localhost:3001");
+connectDB().then(() => {
+  app.listen(3001, () => {
+    console.log("✅ Backend chạy tại http://localhost:3001");
+  });
 });

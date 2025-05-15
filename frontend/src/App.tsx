@@ -5,6 +5,8 @@ import "./index.css";
 // import InstallationPage from "./pages/Installation/InstallationPage";
 import Header from "./components/Header/Header";
 import ConfigurationPage from "./pages/Configuration/ConfigurationPage";
+import HistoryPage from "./pages/History/HistoryPage";
+import ConfigurationHistoryPage from "./pages/History/ConfigurationHistoryPage";
 function App() {
   return (
     <Router>
@@ -31,11 +33,29 @@ function App() {
               }
             />
             <Route
+              path="/histories"
+              element={
+                <>
+                  <Header />
+                  <HistoryPage />
+                </>
+              }
+            />
+            <Route
               path="/configuration"
               element={
                 <>
                   <Header />
                   <ConfigurationPage />
+                </>
+              }
+            />
+            <Route
+              path="/configuration-history"
+              element={
+                <>
+                  <Header />
+                  <ConfigurationHistoryPage />
                 </>
               }
             />

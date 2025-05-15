@@ -14,7 +14,7 @@ import { handlePrSummary } from "./handler/handler-prsummary.js";
 import {
   handleScanIssue,
   handleScanPullRequest,
-} from "./handler/handle-scan.js";
+} from "./handler/handler-scan.js";
 import { handleAiReviewPullRequest } from "./handler/handler-ai-review.js";
 
 // Hàm chính xử lý bot
