@@ -3,7 +3,7 @@ import { BotConfig, BotInfo } from "../../types";
 import { botConfigsData } from "../../tempData";
 import BotList from "../../components/Bot/BotList";
 import BotNotFound from "../../components/Bot/BotNotFound";
-import { botInfoE } from "../../tempData";
+import { botInfo } from "../../tempData";
 import BotInfoComponent from "../../components/Bot/BotInfo";
 export default function BotConfigurationPage() {
   const [loading, setLoading] = useState<boolean>(true);
@@ -18,7 +18,7 @@ export default function BotConfigurationPage() {
 
   const fetchBotConfigs = async () => {
     setCurrentConfigs([]);
-    if (botInfoE) setCurrentBotInfo(botInfoE);
+    if (botInfo) setCurrentBotInfo(botInfo);
   };
   useEffect(() => {
     setLoading(true);
@@ -70,7 +70,7 @@ export default function BotConfigurationPage() {
     if (newPage < 1 || newPage > totalPages) return;
     setCurrentPage(newPage);
   };
-  console.log("co gi koc", currentBotInfo);
+  
   return (
     <>
       {loading ? (

@@ -40,8 +40,9 @@ const handlePushYmlFileToARepositoy = async (
     yamlContent: yamlResults,
   };
 
-  const boolean = await apiPushYamlToRepo(params);
-  return boolean;
+  const data = await apiPushYamlToRepo(params);
+  if (data.isSuccess) return true;
+  return false;
 };
 const FormConfiguration = ({
   selectedRepos,
@@ -74,8 +75,13 @@ const FormConfiguration = ({
     if (localStorage.getItem("accessToken")) {
       const accessToken = localStorage.getItem("accessToken")!;
       for (const repo of selectedRepos) {
-        if (await handlePushYmlFileToARepositoy(repo, yamlResults, accessToken))
-          notify("Lưu thành công");
+        const rs = await handlePushYmlFileToARepositoy(
+          repo,
+          yamlResults,
+          accessToken,
+        );
+        console.log(rs);
+        if (rs) notify("Lưu thành công");
       }
     }
   };

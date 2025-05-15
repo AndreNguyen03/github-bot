@@ -1,6 +1,7 @@
 import passport from "passport";
 import installationEndpoint from "./installation.js";
 import repositoryControler from "../controller/RepositoryController.js";
+import botEndPoint from "./bot.js";
 export default function api(app) {
   // 👉 Route GitHub login
   app.get("/auth/github", passport.authenticate("github", { scope: ["repo"] }));
@@ -13,9 +14,6 @@ export default function api(app) {
       res.redirect("http://localhost:5173");
     }
   );
-
-  //xem bot có thể handle những repository nào
-  app.get("/api/installations", installationEndpoint);
 
   // 👉 API trả user hiện tại
   app.get("/api/user", (req, res) => {
@@ -42,5 +40,9 @@ export default function api(app) {
       res.json({ message: "Đã logout" });
     });
   });
-  app.get("/api/user/repositories", repositoryControler.getRepositories);
+
+  //xem bot có thể handle những repository nào
+  app.get("/api/installations", installationEndpoint);
+  app.get("/api/repositories", repositoryControler.getRepositories);
+  app.use("/api/bot", botEndPoint);
 }

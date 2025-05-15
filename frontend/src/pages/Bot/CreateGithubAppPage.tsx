@@ -27,19 +27,19 @@ export default function GitHubAppCreator() {
 
   // GitHub app manifest - định nghĩa các thuộc tính của ứng dụng
   const manifest = {
-    name: "My GitHub App",
-    url: "https://example.com", // Trang chính của GitHub App
+    name: "Octoapp",
+    url: "https://www.example.com",
     hook_attributes: {
-      url: "https://example.com/webhook", // Webhook nhận sự kiện
+      url: "https://example.com/github/events",
     },
-    redirect_url: "http://localhost:5173/bot/newapp",
-    public: true,
+    redirect_url: "__redirectUrl__",
+    callback_urls: ["https://example.com/callback"],
+    public: false,
     default_permissions: {
       issues: "write",
-      pull_requests: "write",
-      contents: "read",
+      checks: "write",
     },
-    default_events: ["issues", "issue_comment", "pull_request", "push"],
+    default_events: ["issues", "issue_comment", "check_suite", "check_run"],
     description: "A GitHub App created with React and Tailwind",
   };
 

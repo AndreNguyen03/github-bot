@@ -240,3 +240,9 @@ interface ConfigSummary {
   enabled: boolean;
   summaryFeatures: string[]; // Các tính năng đang bật như ["auto_label", "discord_notifications"]
 }
+
+export interface Result {
+  isSucess: boolean;
+
+  message: string;
+}

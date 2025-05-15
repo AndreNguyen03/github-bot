@@ -6,6 +6,7 @@ import {
   // PushYamlParams,
   RepositoryListResponse,
   RepositoryPageReponse,
+  Result,
   User,
 } from "./types";
 
@@ -122,7 +123,7 @@ export async function handleAPIGetRepositories(
   perPage: number = 100,
   pageNumber: number = 1,
 ): Promise<RepositoryPageReponse | undefined> {
-  const url = `http://localhost:3001/api/user/repositories?accessToken=${accessToken}&perPage=${perPage}&page=${pageNumber}`;
+  const url = `http://localhost:3001/api/repositories?accessToken=${accessToken}&perPage=${perPage}&page=${pageNumber}`;
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -183,61 +184,24 @@ export default async function apiPushYamlToRepo({
     yamlContent,
     filePath,
   );
-  try {
-    const octokit = new Octokit({ auth: accessToken });
+  //const encodedYaml = encodeURIComponent(yamlContent);
 
-    // Kiểm tra file đã tồn tại chưa để lấy sha
-    let sha: string | undefined;
-    try {
-      const { data: fileData } = await octokit.repos.getContent({
-        owner: repoOwnerName,
-        repo: repoName,
-        path: filePath,
-        ref: branch,
-      });
-
-      if (!Array.isArray(fileData) && fileData.sha) {
-        sha = fileData.sha;
-      }
-    } catch (err: unknown) {
-      if (err instanceof RequestError && err.status !== 404) {
-        throw err; // Chỉ bỏ qua nếu file chưa tồn tại
-      }
-    }
-
-    // Encode nội dung YAML
-    const contentBase64 = btoa(unescape(encodeURIComponent(yamlContent)));
-
-    // Push file
-    const result = await octokit.repos.createOrUpdateFileContents({
-      owner: repoOwnerName,
-      repo: repoName,
-      path: filePath,
-      message: "Update file .githu/bot-config.yml",
-      content: contentBase64,
+  const apiUrl = `http://localhost:3001/api/bot/newconfig`;
+  const res = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      accessToken: accessToken,
+      repoOwnerName: repoOwnerName,
+      repoName: repoName,
+      yamlContent: yamlContent,
+      filePath: filePath,
       branch: branch,
-      sha,
-    });
-    const status = result.status;
-    if (status === 200 || status === 201) return true;
-    else return false;
-  } catch (err: unknown) {
-    if (err instanceof RequestError) {
-      switch (err.status) {
-        case 401:
-          throw new Error(
-            "⚠️ Unauthorized: Token không hợp lệ hoặc đã hết hạn.",
-          );
-        case 403:
-          throw new Error("🚫 Forbidden: Không có quyền ghi vào repository.");
-        case 404:
-          throw new Error(
-            "❓ Not Found: Không tìm thấy repository hoặc branch.",
-          );
-        default:
-          throw new Error(`❌ GitHub API Error ${err.status}: ${err.message}`);
-      }
-    }
-    throw err;
-  }
+    }),
+  });
+  const data = res.json();
+  console.log("✅ Kết quả phản hồi từ server:", data);
+  return data; // nếu bạn muốn trả về true
 }
